@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>恐龙养成 · 习惯打卡</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,"Noto Sans SC","PingFang SC",system-ui,sans-serif;background:#FFFAF0;color:#2D2A26;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+input,textarea,select{user-select:text;-webkit-user-select:text}
+.app{max-width:420px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;position:relative}
+.status-bar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:14px;flex-shrink:0}
+.status-bar .time{font-weight:700;font-size:16px}
+.status-bar .icons{font-size:13px}
+.content{flex:1;overflow-y:auto;padding:24px 20px 20px;display:flex;flex-direction:column;gap:18px}
+.content::-webkit-scrollbar{display:none}
+.screen{display:none;flex-direction:column;gap:18px;min-height:100%;padding-bottom:30px}
+.screen.active{display:flex}
+.page-title{font-size:26px;font-weight:700;font-family:"Noto Serif SC","Source Han Serif SC",serif;display:flex;align-items:center;gap:8px}
+.section-title{font-size:20px;font-weight:700;font-family:"Noto Serif SC",serif;margin-top:4px}
+
+/* Home */
+.dino-garden{display:flex;flex-direction:column;gap:16px}
+.garden-scroll{display:flex;gap:12px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+.garden-scroll::-webkit-scrollbar{display:none}
+.garden-card{flex:1;min-width:0;background:#FFF;border-radius:24px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(255,200,87,0.10);cursor:pointer;transition:all 0.2s ease;min-height:120px}
+.garden-card svg{width:64px;height:64px;display:block}
+.garden-card .g-name{font-size:12px;font-weight:600;text-align:center;word-break:keep-all}
+.garden-card .g-level{font-size:10px;color:#5C5147;text-align:center}
+.garden-card .g-bar{width:100%;height:4px;border-radius:2px;background:#F5E5BD;overflow:hidden}
+.garden-card .g-fill{height:100%;border-radius:2px;background:#FFC857;transition:width 0.4s ease}
+.garden-card.done{opacity:0.55;background:#F5E5BD;box-shadow:none}
+.garden-card.done .g-name{color:#9B8347}
+.garden-card.done .g-level{color:#7B9E45;font-weight:600}
+
+.featured-card{background:#FFF;border-radius:32px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 4px 16px rgba(255,200,87,0.12)}
+.featured-card svg{width:160px;height:160px;display:block}
+.featured-card .f-name{font-size:22px;font-weight:700;font-family:"Noto Serif SC",serif}
+.featured-card .f-stage{font-size:14px;color:#5C5147;text-align:center}
+.f-levels{width:100%;display:flex;flex-direction:column;gap:6px}
+.f-level-row{display:flex;align-items:center;gap:8px}
+.f-level-row .lv-label{font-size:11px;color:#5C5147;white-space:nowrap;width:48px;flex-shrink:0}
+.f-level-row .lv-bar{flex:1;height:8px;border-radius:4px;background:#F5E5BD;overflow:hidden}
+.f-level-row .lv-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#FFC857,#FFB020);transition:width 0.4s ease}
+.f-level-row .lv-count{font-size:11px;color:#888;width:24px;text-align:right;flex-shrink:0}
+.f-fact{width:100%;padding:12px 16px;background:#FFFCF5;border-radius:16px;border:1px solid #F5E5BD;font-size:13px;color:#5C5147;line-height:1.6;text-align:center}
+.grass{text-align:center;font-size:24px;letter-spacing:3px;opacity:0.6}
+
+/* Animations */
+@keyframes evolve{0%{transform:scale(1) rotate(0deg)}25%{transform:scale(1.4) rotate(-8deg)}50%{transform:scale(1.2) rotate(5deg)}75%{transform:scale(1.5) rotate(-3deg)}100%{transform:scale(1) rotate(0deg)}}
+@keyframes hatch{0%{transform:rotate(0)}15%{transform:rotate(-6deg)}30%{transform:rotate(6deg)}45%{transform:rotate(-4deg)}60%{transform:rotate(4deg)}100%{transform:rotate(0)}}
+@keyframes slideUp{from{opacity:0.4}to{opacity:1}}
+.evolving{animation:evolve 0.8s ease}
+.hatching{animation:hatch 0.6s ease}
+
+/* Tasks */
+.daily-progress{background:#FFF;border-radius:32px;padding:16px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(255,200,87,0.10)}
+.daily-progress .dp-icon{font-size:28px}
+.daily-progress .dp-text{font-size:16px;color:#5C5147;font-weight:500}
+.daily-progress .dp-count{font-size:18px;font-weight:700;color:#7BB661;margin-left:auto}
+.task-item{background:#FFF;border-radius:24px;padding:16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(255,200,87,0.10);transition:all 0.2s ease}
+.task-item .ti-icon{font-size:36px;flex-shrink:0}
+.task-item .ti-body{flex:1;display:flex;flex-direction:column;gap:4px}
+.task-item .ti-name{font-size:18px;font-weight:600}
+.task-item .ti-reward{font-size:14px;font-weight:500;color:#FFC857}
+.task-item .btn-check{width:64px;height:60px;border-radius:30px;border:none;font-size:14px;font-weight:700;color:#FFF;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap}
+.task-item .btn-check.active{background:#7BB661;font-size:16px}
+.task-item .btn-check.pending{background:#FFC857}
+.task-item .btn-check.blue{background:#6BB6E0}
+.task-item .btn-check.coral{background:#FF8C7A}
+
+/* Collection */
+.stats-row{display:flex;align-items:center;gap:8px;background:#FFF;border-radius:24px;padding:16px 8px;box-shadow:0 4px 16px rgba(255,200,87,0.10)}
+.stat-block{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.stat-block .num{font-size:22px;font-weight:700;font-family:"Noto Serif SC",serif}
+.stat-block .label{font-size:13px;color:#5C5147}
+.stat-divider{width:1px;height:40px;background:#F5E5BD}
+.coll-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.coll-dino{background:#FFF;border-radius:32px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(255,200,87,0.10);cursor:pointer}
+.coll-dino.locked{background:#F5F0E0;opacity:0.6}
+.coll-dino svg{width:80px;height:80px;display:block}
+.coll-dino .cd-name{font-size:16px;font-weight:600}
+.coll-dino .cd-level{font-size:13px;color:#5C5147;font-weight:500;text-align:center}
+.coll-dino .cd-bar{width:100%;height:4px;border-radius:2px;background:#F5E5BD;overflow:hidden}
+.coll-dino .cd-fill{height:100%;border-radius:2px;transition:width 0.3s ease}
+.badge-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.badge-item{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+.badge-item .b-icon{width:54px;height:54px;border-radius:27px;display:flex;align-items:center;justify-content:center;font-size:28px}
+.badge-item .b-name{font-size:11px;text-align:center}
+.badge-item .b-name.unlocked{color:#2D2A26}
+.badge-item .b-name.locked{color:#E5D198}
+
+/* Settings */
+.hint-text{font-size:14px;color:#5C5147;line-height:1.5}
+.section-header{display:flex;align-items:center;justify-content:space-between}
+.btn-add{display:flex;align-items:center;gap:4px;background:#FFC857;border:none;border-radius:16px;padding:6px 14px;color:#FFF;font-size:14px;font-weight:600;cursor:pointer}
+.st-item{background:#FFF;border-radius:24px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(255,200,87,0.10);margin-bottom:10px}
+.st-item .sti-icon{font-size:28px;flex-shrink:0}
+.st-item .sti-body{flex:1}
+.st-item .sti-body .row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.st-item .sti-body .row label{font-size:13px;color:#5C5147;white-space:nowrap}
+.st-item .sti-body .row input{border:1px solid #F5E5BD;border-radius:10px;padding:6px 10px;font-size:14px;font-family:inherit;background:#FFFCF5;outline:none}
+.st-item .sti-body .row input.ename{width:120px;flex:1}
+.st-item .sti-body .row input.energy{width:60px;text-align:center}
+.st-item .btn-del{width:32px;height:32px;border-radius:16px;border:1px solid #F5E5BD;background:#FFFCF5;font-size:16px;color:#FF8C7A;cursor:pointer;flex-shrink:0}
+.so-item{background:#FFF;border-radius:24px;padding:16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(255,200,87,0.10);margin-bottom:10px}
+.so-item .so-icon{font-size:24px}
+.so-item .so-body{flex:1}
+.so-item .so-name{font-size:16px;font-weight:600}
+.so-item .so-desc{font-size:13px;color:#5C5147}
+.toggle{width:48px;height:28px;border-radius:14px;position:relative;cursor:pointer;flex-shrink:0;border:none;transition:background 0.2s}
+.toggle.on{background:#7BB661}
+.toggle.off{background:#E5D198}
+.toggle .knob{width:24px;height:24px;border-radius:12px;background:#FFF;position:absolute;top:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
+.toggle.on .knob{left:22px}
+.toggle.off .knob{left:2px}
+.btn-reset{width:100%;padding:14px;border-radius:24px;border:1px solid #FF8C7A;background:#FFFCF5;color:#FF8C7A;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px}
+.bk-info{background:#F0F8F0;border-radius:24px;padding:12px 16px;margin-top:12px;font-size:13px;line-height:1.7;color:#3D6B3D;border:1px solid #C8E6C0}
+.bk-info .bk-title{font-weight:700;font-size:14px;margin-bottom:2px}
+.bk-info .bk-dot{display:inline-block;width:8px;height:8px;border-radius:4px;background:#7BB661;margin-right:6px;vertical-align:middle;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* Feed & Add Modals */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:999}
+.modal-overlay.show{display:block}
+.modal{position:fixed;bottom:0;left:0;right:0;margin:0 auto;width:100%;max-width:420px;background:#FFF;border-radius:32px 32px 0 0;padding:24px 20px 40px;z-index:1000;box-shadow:0 -8px 32px rgba(0,0,0,0.1);animation:slideUp 0.3s ease;display:none}
+.modal .m-title{font-size:20px;font-weight:700;font-family:"Noto Serif SC",serif;text-align:center;margin-bottom:6px}
+.modal .m-sub{font-size:14px;color:#5C5147;text-align:center;margin-bottom:18px}
+.feed-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-height:340px;overflow-y:auto;padding:4px}
+.feed-grid::-webkit-scrollbar{display:none}
+.feed-item{background:#FFFCF5;border:2px solid #F5E5BD;border-radius:20px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+.feed-item svg{width:56px;height:56px;display:block}
+.feed-item .fi-name{font-size:12px;font-weight:600;text-align:center;word-break:keep-all}
+.feed-item .fi-energy{font-size:11px;color:#FFC857}
+.feed-item .fi-bar{width:100%;height:3px;border-radius:2px;background:#F5E5BD;overflow:hidden}
+.feed-item .fi-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#FFC857,#FFB020)}
+.btn-close{display:block;width:100%;padding:12px;border-radius:20px;border:none;background:#F5E5BD;color:#5C5147;font-size:15px;font-weight:600;cursor:pointer;margin-top:14px;font-family:inherit}
+.fm-field{margin-bottom:14px}
+.fm-field label{display:block;font-size:13px;color:#5C5147;margin-bottom:6px}
+.fm-field input,.fm-field select{width:100%;padding:10px 14px;border:1px solid #F5E5BD;border-radius:14px;font-size:15px;font-family:inherit;background:#FFFCF5;outline:none}
+.fm-btns{display:flex;gap:12px;margin-top:16px}
+.fm-btns button{flex:1;padding:12px;border-radius:18px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+.fm-btns .b-cancel{background:#F5E5BD;color:#5C5147}
+.fm-btns .b-confirm{background:#FFC857;color:#FFF}
+
+/* Achievement popup */
+.popup-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000}
+.popup-overlay.show{display:block}
+.popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-width:320px;width:90%;background:#FFF;border-radius:32px;padding:32px 24px;z-index:2001;box-shadow:0 8px 40px rgba(0,0,0,0.2);animation:slideUp 0.3s ease;text-align:center}
+.popup .p-icon{font-size:48px;margin-bottom:12px}
+.popup .p-title{font-size:20px;font-weight:700;font-family:"Noto Serif SC",serif;margin-bottom:6px}
+.popup .p-desc{font-size:14px;color:#5C5147;line-height:1.6;margin-bottom:8px}
+.popup .p-hint{font-size:13px;color:#FFC857;font-weight:500}
+.popup .p-close{display:inline-block;margin-top:16px;padding:10px 28px;border-radius:20px;border:none;background:#FFC857;color:#FFF;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+
+/* Tab Bar */
+.tab-bar{padding:12px 21px 21px;flex-shrink:0}
+.tab-pill{display:flex;gap:4px;background:#FFF;border:1px solid #F5E5BD;border-radius:36px;padding:4px;height:62px}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:26px;border:none;background:transparent;cursor:pointer;font-size:10px;font-weight:600;color:#5C5147;letter-spacing:0.5px;text-transform:uppercase}
+.tab-item .tab-icon{font-size:18px}
+.tab-item.active{background:#FFC857;color:#FFF}
+
+/* Toast */
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#7BB661;color:#FFF;padding:12px 24px;border-radius:20px;font-weight:600;font-size:16px;box-shadow:0 4px 20px rgba(123,182,97,0.4);z-index:1000;display:none;animation:slideUp 0.3s ease}
+.toast.show{display:block}
+
+/* === Interactive Upgrades === */
+
+/* Floating energy number */
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-120px) scale(1.5)}}
+@keyframes floatUpSmall{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-80px)}}
+.float-energy{position:fixed;pointer-events:none;z-index:500;font-size:32px;font-weight:800;color:#FFC857;text-shadow:0 2px 8px rgba(255,200,87,0.5);animation:floatUp 1.2s ease forwards}
+
+/* Hearts */
+@keyframes heartFloat{0%{opacity:1;transform:translateY(0) scale(0.5) rotate(0deg)}50%{opacity:0.8;transform:translateY(-50px) scale(1.2) rotate(10deg)}100%{opacity:0;transform:translateY(-100px) scale(0.8) rotate(-10deg)}}
+.heart-particle{position:fixed;pointer-events:none;z-index:501;font-size:18px;animation:heartFloat 1.5s ease forwards}
+
+/* Dino bounce on feed */
+@keyframes feedBounce{0%{transform:scale(1)}15%{transform:scale(1.15) rotate(-3deg)}30%{transform:scale(0.9) rotate(2deg)}45%{transform:scale(1.08) rotate(-1deg)}60%{transform:scale(0.95)}100%{transform:scale(1)}}
+.feed-bounce{animation:feedBounce 0.7s ease}
+
+/* Flash overlay for evolution */
+@keyframes flashAnim{0%{opacity:0}30%{opacity:0.6}100%{opacity:0}}
+.evo-flash{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle,#FFC857,#FF8C7A);z-index:998;pointer-events:none;animation:flashAnim 0.8s ease forwards}
+
+/* Sparkle burst for evolution */
+@keyframes sparkleFly{0%{opacity:1;transform:translate(0,0) scale(1) rotate(0deg)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0) rotate(720deg)}}
+.sparkle{position:fixed;pointer-events:none;z-index:999;font-size:22px;animation:sparkleFly 1s ease forwards}
+
+/* Confetti pour for completion */
+@keyframes confettiFall{0%{opacity:1;transform:translateY(-10px) rotate(0deg)}100%{opacity:0;transform:translateY(100vh) rotate(720deg)}}
+.confetti{position:fixed;pointer-events:none;z-index:997;font-size:14px;animation:confettiFall var(--dur,2s) linear forwards}
+@keyframes confettiSway{0%{transform:translateX(0)}50%{transform:translateX(30px)}100%{transform:translateX(-20px)}}
+.confetti-piece{position:fixed;pointer-events:none;z-index:997;width:10px;height:10px;border-radius:2px;animation:confettiFall var(--dur,3s) linear forwards}
+
+/* Congratulatory big toast */
+@keyframes zoomIn{0%{opacity:0;transform:translateX(-50%) scale(0.3)}50%{opacity:1;transform:translateX(-50%) scale(1.15)}100%{opacity:1;transform:translateX(-50%) scale(1)}}
+.toast.big{font-size:22px;padding:18px 32px;background:linear-gradient(135deg,#FFC857,#FF8C7A);top:50%;z-index:2002;animation:zoomIn 0.5s ease forwards;box-shadow:0 8px 40px rgba(255,200,87,0.5)}
+
+/* Pulsing glow on level up */
+@keyframes glowPulse{0%{box-shadow:0 0 0 0 rgba(255,200,87,0.6)}50%{box-shadow:0 0 30px 10px rgba(255,200,87,0.2)}100%{box-shadow:0 0 0 0 rgba(255,200,87,0)}}
+.glow-pulse{animation:glowPulse 1s ease 2}
+</style>
+</head>
+<body>
+<div class="app">
+  
+  <div class="toast" id="toast"></div>
+<div id="particleContainer" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:500;overflow:hidden"></div>
+
+  <!-- Feed Modal -->
+  <div class="modal-overlay" id="feedOverlay"></div>
+  <div class="modal" id="feedModal">
+    <div class="m-title">⚡ 喂养能量</div>
+    <div class="m-sub" id="feedEnergyText">获得能量！选一只恐龙喂养</div>
+    <div class="feed-grid" id="feedGrid"></div>
+    <button class="btn-close" onclick="closeFeedModal()">稍后再说</button>
+  </div>
+
+  <!-- Custom Confirm Modal -->
+<div class="modal-overlay" id="confirmOverlay"></div>
+<div class="modal" id="confirmModal" style="display:none">
+  <div class="fm-title" id="confirmTitle">确认操作</div>
+  <div class="m-sub" id="confirmMsg">确定要继续吗？</div>
+  <div class="fm-btns">
+    <button class="b-cancel" id="confirmCancel">取消</button>
+    <button class="b-confirm" id="confirmOk">确定</button>
+  </div>
+</div>
+
+<!-- Add Task Modal -->
+  <div class="modal-overlay" id="taskModalOverlay"></div>
+  <div class="modal" id="taskAddModal">
+    <div class="m-title">✨ 添加新任务</div>
+    <div class="fm-field"><label>任务名称</label><input type="text" id="newTaskName" placeholder="如：自己穿衣服" maxlength="20"></div>
+    <div class="fm-field">
+      <label>图标</label>
+      <select id="newTaskIcon" style="font-size:16px;height:130px">
+        <optgroup label="🪥 生活习惯">
+          <option value="🦷">🦷 刷牙</option><option value="🌙">🌙 按时睡觉</option><option value="🧴">🧴 洗脸</option>
+          <option value="🧼">🧼 洗手</option><option value="👕">👕 穿衣服</option><option value="👖">👖 自己穿衣裤</option>
+          <option value="🥣">🥣 好好吃饭</option><option value="🍚">🍚 光盘行动</option><option value="💧">💧 多喝水</option>
+          <option value="🍎">🍎 吃水果</option><option value="🥦">🥦 吃蔬菜</option><option value="🛁">🛁 洗澡</option>
+          <option value="💅">💅 剪指甲</option><option value="🧑‍🎤">🧑‍🎤 自己梳头</option><option value="👟">👟 穿鞋</option>
+          <option value="🧣">🧣 添减衣服</option>
+        </optgroup>
+        <optgroup label="📚 学习成长">
+          <option value="📚">📚 阅读绘本</option><option value="✏️">✏️ 写作业</option><option value="🖍️">🖍️ 涂色画画</option>
+          <option value="🎨">🎨 画画</option><option value="🎵">🎵 音乐</option><option value="🎹">🎹 练琴</option>
+          <option value="🔤">🔤 认字</option><option value="🔢">🔢 学数学</option><option value="🌍">🌍 学英语</option>
+          <option value="🧩">🧩 拼图积木</option><option value="🎲">🎲 益智游戏</option><option value="🏫">🏫 幼儿园/上学</option>
+          <option value="📖">📖 背古诗</option><option value="🗣️">🗣️ 讲故事</option><option value="🔬">🔬 科学小实验</option>
+        </optgroup>
+        <optgroup label="🏃 运动健康">
+          <option value="⚽">⚽ 踢球</option><option value="🏀">🏀 打篮球</option><option value="🏸">🏸 羽毛球</option>
+          <option value="🛴">🛴 滑板车</option><option value="🚲">🚲 骑自行车</option><option value="🏊">🏊 游泳</option>
+          <option value="🤸">🤸 运动锻炼</option><option value="🚶">🚶 户外散步</option><option value="⛹️">⛹️ 拍球</option>
+          <option value="🪁">🪁 放风筝</option><option value="🏃">🏃 跑步</option><option value="🧗">🧗 攀爬</option>
+        </optgroup>
+        <optgroup label="🧹 家务小帮手">
+          <option value="🧹">🧹 扫地</option><option value="🧸">🧸 收拾玩具</option><option value="🛏️">🛏️ 叠被子</option>
+          <option value="👟">👟 摆好鞋子</option><option value="🍽️">🍽️ 摆碗筷</option><option value="🧺">🧺 收衣服</option>
+          <option value="🗑️">🗑️ 倒垃圾</option><option value="💦">💦 擦桌子</option><option value="🪴">🪴 浇花</option>
+          <option value="🐶">🐶 喂宠物</option><option value="🎒">🎒 整理书包</option><option value="📚">📚 整理书桌</option>
+        </optgroup>
+        <optgroup label="🌸 好品德">
+          <option value="💕">💕 帮助别人</option><option value="🙏">🙏 说谢谢</option><option value="😊">😊 微笑礼貌</option>
+          <option value="🤝">🤝 分享玩具</option><option value="⏰">⏰ 准时起床</option><option value="🌱">🌱 爱护植物</option>
+          <option value="🖐️">🖐️ 诚实守信</option><option value="🌟">🌟 做一件好事</option><option value="🤗">🤗 拥抱家人</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="fm-field"><label>每次能量值 (免费版1-100 / 完整版可更高)</label><input type="number" id="newTaskEnergy" value="10" min="1" max="100"></div>
+    <div class="fm-btns"><button class="b-cancel" onclick="closeAddModal()">取消</button><button class="b-confirm" onclick="confirmAddTask()">添加</button></div>
+  </div>
+
+  <!-- Dino Detail Popup -->
+<div class="popup-overlay" id="dinoPopupOverlay"></div>
+<div class="popup" id="dinoPopup" style="display:none">
+  <div id="dinoPopupContent" style="display:flex;flex-direction:column;align-items:center;gap:12px;"></div>
+  <button class="p-close" onclick="closeDinoPopup()" style="margin-top:16px">知道了</button>
+</div>
+
+<!-- Paywall Popup -->
+<div class="popup-overlay" id="paywallOverlay"></div>
+<div class="popup" id="paywallPopup" style="display:none">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 4px">
+    <div style="font-size:44px">💎</div>
+    <div class="m-title" style="font-size:20px;font-weight:700;font-family:'Noto Serif SC',serif">恐龙养成 · 完整版</div>
+    <div style="font-size:13px;color:#5C5147;line-height:1.8;text-align:center">
+      解锁第 5 只起的全部 <b style="color:#FFC857">20 只恐龙</b><br>
+      集齐图鉴 · 持续收集新蛋 · 无限乐趣
+    </div>
+    <div style="background:#FFFCF5;border:1px solid #F5E5BD;border-radius:16px;padding:12px 18px;width:100%">
+      <div style="display:flex;justify-content:space-between;font-size:13px;line-height:2"><span style="color:#888">免费版</span><span style="color:#2D2A26">免费畅玩 4 只恐龙</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;line-height:2"><span style="color:#888">完整版</span><span style="color:#2D2A26">20 只恐龙 · 持续解锁</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;line-height:2"><span style="color:#888">价格</span><span style="color:#FFC857;font-weight:700;font-size:16px">9.9 元（一次性）</span></div>
+    </div>
+    <div style="display:flex;gap:10px;width:100%;margin-top:4px">
+      <input type="text" id="proCodeInput" placeholder="输入兑换码激活" style="flex:1;padding:10px 14px;border:1px solid #F5E5BD;border-radius:14px;font-size:14px;background:#FFFCF5;outline:none;text-transform:uppercase">
+      <button class="b-confirm" onclick="tryActivate()" style="padding:10px 18px;border:none;border-radius:14px;background:#7BB661;color:#FFF;font-weight:700;font-size:14px;cursor:pointer">激活</button>
+    </div>
+    <div style="font-size:11px;color:#AAA;margin-top:2px">兑换码请联系博主获取 · 一次激活永久解锁</div>
+  </div>
+  <button class="p-close" onclick="closePaywall()" style="margin-top:16px">暂不升级</button>
+</div>
+
+<!-- Achievement popup -->
+  <div class="popup-overlay" id="achPopupOverlay"></div>
+  <div class="popup" id="achPopup" style="display:none">
+    <div class="p-icon" id="popupIcon">⭐</div>
+    <div class="p-title" id="popupTitle">称号名</div>
+    <div class="p-desc" id="popupDesc">描述</div>
+    <div class="p-hint" id="popupHint">条件</div>
+    <button class="p-close" onclick="closeAchPopup()">知道了</button>
+  </div>
+
+<!-- Dino profile popup -->
+<div class="popup-overlay" id="profileOverlay"></div>
+<div class="popup" id="profilePopup" style="display:none">
+  <div id="profileContent" style="display:flex;flex-direction:column;align-items:center;gap:12px;"></div>
+  <button class="p-close" onclick="closeProfile()" style="margin-top:16px">知道了</button>
+</div>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="screen active" id="screenHome">
+      <div class="page-title">🦕 恐龙之家</div>
+      <div class="dino-garden">
+        <div class="garden-scroll" id="gardenScroll"></div>
+        <div class="featured-card" id="featuredCard"></div>
+        <div class="grass">🌿 🌱 🌿</div>
+      </div>
+    </div>
+
+    <div class="screen" id="screenTasks">
+      <div class="page-title">📋 任务中心</div>
+      <div class="daily-progress">
+        <span class="dp-icon">✅</span><span class="dp-text">今日完成</span><span class="dp-count" id="doneCount">0/0</span>
+      </div>
+      <div class="section-title">今日任务</div>
+      <div id="taskList"></div>
+    </div>
+
+    <div class="screen" id="screenCollection">
+      <div class="page-title">🏆 恐龙图鉴</div>
+      <div class="stats-row" id="statsRow"></div>
+      <div class="section-title">我的恐龙</div>
+      <div class="coll-grid" id="dinoGrid"></div>
+      <div class="section-title">成就勋章</div>
+      <div class="badge-row" id="badgeRow"></div>
+    </div>
+
+    <div class="screen" id="screenSettings">
+      <div class="page-title">⚙️ 家长设置 <span style="margin-left:auto;font-size:24px;">🔒</span></div>
+      <div class="hint-text">为孩子定制专属任务 ✨</div>
+      <div class="section-header">
+        <span class="section-title">任务管理</span>
+        <button class="btn-add" onclick="openAddModal()">+ 添加</button>
+      </div>
+      <div id="settingsTaskList"></div>
+      <div id="bkStatus"></div>
+      <div id="proStatus" style="margin-top:12px"></div>
+      <button class="btn-reset" onclick="exportData()" style="margin-top:8px;border-color:#6BB6E0;color:#6BB6E0">📤 导出数据</button>
+      <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="btn-reset" onclick="document.getElementById('importFileInput').click()" style="margin-top:8px;border-color:#FFC857;color:#FFC857">📥 导入数据</button>
+      <button class="btn-reset" onclick="resetAllData()" style="margin-top:16px">🗑️ 重置所有数据</button>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <div class="tab-pill">
+      <button class="tab-item active" data-screen="screenHome"><span class="tab-icon">🏠</span>HOME</button>
+      <button class="tab-item" data-screen="screenTasks"><span class="tab-icon">📋</span>TASKS</button>
+      <button class="tab-item" data-screen="screenCollection"><span class="tab-icon">🏆</span>COLLECTION</button>
+      <button class="tab-item" data-screen="screenSettings"><span class="tab-icon">⚙️</span>SETTINGS</button>
+    </div>
+  </div>
+</div>
+
+<script>var e=0,t=1,a=2,n=3,d=4,c=100,o=3,i=3,s=c,l=o*c,r=i*c,f=[{id:0,name:"霸王龙",nick:"小霸王",facts:["霸王龙生活在白垩纪晚期，是陆地上最厉害的捕食者之一。","霸王龙的牙齿巨大，像一根根香蕉，边缘还有锯齿，能轻松咬碎骨头。","霸王龙的前肢非常非常短，短到连自己的嘴巴都摸不到！","霸王龙的咬合力是陆生动物中最强的，一口下去能压碎一辆小汽车。","霸王龙的眼睛长在脑袋前方，看东西有立体感，能准确判断距离。","霸王龙的嗅觉超级灵敏，能闻到几公里外猎物的气味。","霸王龙走路时尾巴会翘起来，用来保持身体平衡。","刚出生的霸王龙宝宝身上可能覆盖着一层绒毛，像小鸡一样。","霸王龙虽然是肉食恐龙，但它也会吃腐肉，不挑食。","霸王龙的头骨上有空洞，这让它的脑袋更轻，行动起来更灵活。","霸王龙是双足行走的，靠两条粗壮的大腿支撑全身。","霸王龙的大脑在恐龙中不算聪明，但也不算太笨。","霸王龙跑起来的速度大概和人类骑自行车的速度差不多。","成年的霸王龙体长可达12米，比一辆公交车还长！"],cls:"兽脚亚目·暴龙科",era:"白垩纪晚期（约6800万-6600万年前）",len:"11-13m",ht:"约4m",wt:"7-10t",diet:"🥩 肉食",loc:"北美洲",nm:'"暴君蜥蜴"',tag:"咬合力之王·前肢最短的捕食者",body:"#E85D3A",belly:"#F5D0B0",accent:"#C44020",babyW:36,babyH:28,adultW:56,adultH:42,hH:0,hS:0,hW:0,hF:0,nL:0,tL:1,pat:"spots"},{id:1,name:"三角龙",nick:"大角角",facts:["三角龙是植食性恐龙，最喜欢吃坚硬的植物，比如棕榈叶。","三角龙头上有三只角，两只长在眼睛上方，一只长在鼻子上方。","三角龙的头盾又大又厚，像一面盾牌，长度超过1.5米。","三角龙的嘴巴像鹦鹉的喙，尖尖的，可以轻松啃下树叶。","三角龙的牙齿有400到800颗，不断生长，用来磨碎植物。","三角龙喜欢成群生活，一大群在一起，连霸王龙都不敢靠近。","三角龙会用角和头盾来保护自己和宝宝。","三角龙有7到9米长，体重超过5吨，比一头大象还重。","三角龙敢于和霸王龙正面对抗，有时还能打赢！","三角龙头上的三只角也可能是用来吸引异性的，谁角大谁就更受欢迎。","三角龙的头盾像相框一样，每个个体的头盾花纹都不一样。","三角龙生活在北美洲，是那里的明星恐龙。","三角龙虽然看起来笨重，但遇到危险时可以快速跑动。","三角龙的化石在美国和加拿大都有发现，是非常常见的恐龙。"],cls:"鸟臀目·角龙科",era:"白垩纪晚期（约6800万-6600万年前）",len:"7-9m",ht:"约3m",wt:"5-10t",diet:"🌿 植食",loc:"北美洲",nm:'"三只角的脸"',tag:"坦克级植食龙·霸王龙的老对手",body:"#D4894A",belly:"#F5D6A8",accent:"#8B5E2B",babyW:32,babyH:26,adultW:52,adultH:38,hH:3,hS:0,hW:0,hF:1,nL:0,tL:0,pat:"stripes"},{id:2,name:"腕龙",nick:"长脖子",facts:["腕龙生活在侏罗纪晚期，是一种巨大的植食性恐龙。","腕龙的脖子长达15米，能轻松吃到树梢上最嫩的新叶。","腕龙的前腿比后腿长，身体前高后低，像一座移动的塔。","腕龙的鼻孔长在头顶上，像潜水艇的通气管。","腕龙虽然个子高，但脑袋却很小，大脑和核桃差不多大。","为了消化植物，腕龙会吞下小石头帮助磨碎胃里的食物。","腕龙是蜥脚类恐龙的一种，这类恐龙脖子和尾巴都很长。","腕龙的食量惊人，一天要吃几百公斤的食物。","腕龙可能是最早被发现的大型恐龙之一。","腕龙的尾巴相对较短，不像梁龙那样长。","腕龙生活在北美洲的平原和森林地带。","腕龙走路很慢，但每一步都能跨出很远。","腕龙的背部有一排凸起的骨头，让它的背部看起来有点驼。","腕龙被认为是地球上曾经生活过最高的动物之一。"],cls:"蜥脚形亚目·腕龙科",era:"侏罗纪晚期（约1.54亿-1.53亿年前）",len:"22-26m",ht:"12-16m(头部)",wt:"30-60t",diet:"🌿 植食",loc:"北美洲、非洲",nm:'"长臂蜥蜴"',tag:"最高的恐龙之一·前腿比后腿长",body:"#5DAA68",belly:"#B8E6C0",accent:"#3D7A48",babyW:28,babyH:36,adultW:40,adultH:58,hH:0,hS:0,hW:0,hF:0,nL:2,tL:1,pat:"zigzag"},{id:3,name:"翼龙",nick:"小飞侠",facts:["翼龙其实不是恐龙，是爬行动物，是恐龙的表亲。","翼龙是地球上第一个能主动飞行的脊椎动物。","翼龙的翅膀由皮肤和肌肉组成，像蝙蝠一样，和鸟类的翅膀不同。","翼龙主要生活在海岸边，喜欢吃鱼和昆虫。","翼龙的嘴巴又长又尖，像现在鹈鹕，能从水里捞鱼。","翼龙的骨头是中空的，所以身体很轻，方便飞行。","翼龙是卵生动物，会下蛋并照顾自己的蛋宝宝。","有些翼龙的体型巨大，展翅后比一架小飞机还宽。","翼龙在地面上走路时，会用四条腿爬行。","翼龙常被误认为是会飞的恐龙，但这个说法不对哦。","翼龙的头上可能有头冠，用来吸引异性或保持平衡。","翼龙生活在三叠纪晚期到白垩纪晚期，存在很长时间。","翼龙的眼睛很大，视力非常好，能在高空发现水里的鱼。","翼龙飞行时靠翅膀扇动和滑翔结合，非常灵活。"],cls:"翼龙目（✖不是恐龙）",era:"三叠纪晚期至白垩纪晚期",len:"翼展最大10m+",ht:"-",wt:"0.5-250kg",diet:"🥩 肉食",loc:"全球各大洲",nm:'"有翼膀的蜥蜴"',tag:"最早的飞行脊椎动物·不是恐龙哦",body:"#6BB6E0",belly:"#E0F0FF",accent:"#4A8FC7",babyW:30,babyH:24,adultW:48,adultH:36,hH:0,hS:0,hW:1,hF:0,nL:0,tL:2,pat:"stars"},{id:4,name:"剑龙",nick:"大剑剑",facts:["剑龙生活在侏罗纪晚期，是大型植食性恐龙。","剑龙背上两排巨大的骨板，像插着一把把利剑。","剑龙的尾巴上有四根尖尖的尾刺，每根长达1米，是秘密武器。","剑龙的脑袋非常小，大脑只有核桃那么大，是恐龙中最笨的之一。","剑龙的骨板内有血管，能像太阳能板一样吸收热量，也能散热降温。","剑龙体长可达9米，但身高不算高。","剑龙的后腿比前腿长很多，所以屁股翘得高高的。","剑龙用小小的嘴和牙齿啃食低矮的蕨类植物。","剑龙行动缓慢，主要靠身上的骨板和尾刺保护自己。","科学家认为剑龙的骨板颜色鲜艳，可以用来炫耀或吓跑敌人。","剑龙可能是侏罗纪时期的慢生活家，不急不忙地吃草。","剑龙的化石在北美和欧洲都有发现。","剑龙的尾刺非常厉害，可以轻易刺穿捕食者的皮肤。","剑龙是恐龙世界里外形最独特的恐龙之一。"],cls:"鸟臀目·剑龙科",era:"侏罗纪晚期（约1.55亿-1.45亿年前）",len:"7-9m",ht:"2.8-3.5m",wt:"2-4t",diet:"🌿 植食",loc:"北美洲、欧洲",nm:'"有屋顶的蜥蜴"',tag:"骨板像剑·脑子只有核桃大",body:"#9B72CF",belly:"#D4C0F0",accent:"#6A4A9E",babyW:34,babyH:24,adultW:54,adultH:36,hH:0,hS:2,hW:0,hF:0,nL:0,tL:1,pat:"hearts"},{id:5,name:"马门溪龙",nick:"大长长",facts:["马门溪龙生活在中国，是侏罗纪晚期的一种蜥脚类恐龙。","马门溪龙的脖子极长，由19块颈椎骨组成，是恐龙中脖子最长的之一。","马门溪龙体长可达22米，其中脖子就占了一半超过10米！","马门溪龙是植食性恐龙，用长脖子伸到树梢够嫩叶吃。","马门溪龙的化石最早在中国四川马门溪被发现，所以叫这个名字。","马门溪龙的四肢像四根大柱子，用来支撑十几吨重的身体。","马门溪龙的尾巴相对较短，不像梁龙那样细长。","马门溪龙生活在古代中国，是中国的恐龙明星。","马门溪龙和梁龙腕龙一样，都属于蜥脚类恐龙家族。","马门溪龙的颈椎骨长而轻，既有长度又不会太重。","马门溪龙需要用巨大的胃来消化大量植物。","马门溪龙一天大部分时间都在吃东西，像个大胃王。","马门溪龙的牙齿像小钉子，只能把叶子撸下来不能咀嚼。","马门溪龙是亚洲发现的最著名的恐龙之一。"],cls:"蜥脚形亚目·马门溪龙科",era:"侏罗纪晚期（约1.6亿-1.45亿年前）",len:"22-26m",ht:"7-10m(头部)",wt:"15-25t",diet:"🌿 植食",loc:"🇨🇳 中国",nm:'"马门溪的蜥蜴"',tag:"脖子最长的恐龙之一·中国的国宝恐龙",body:"#4A7CB5",belly:"#B8D4F0",accent:"#2C5A8C",babyW:30,babyH:26,adultW:48,adultH:40,hH:0,hS:1,hW:0,hF:0,nL:0,tL:0,pat:"dots"},{id:6,name:"棘龙",nick:"大帆帆",facts:["棘龙生活在白垩纪时期，是最大的肉食性恐龙之一。","棘龙最特别的地方是背上有巨大的帆，由长长的脊椎骨支撑。","这个帆可能用来调节体温，或者用来吓唬其他动物。","棘龙的体型比霸王龙还要大，是真正的巨无霸。","棘龙是唯一一种会游泳的大型肉食恐龙，主要吃鱼。","棘龙的嘴巴又长又窄，像鳄鱼一样非常适合抓鱼。","棘龙的爪子又大又弯，像钩子可以牢牢抓住滑溜溜的鱼。","棘龙生活在北非，那里当时是河流和沼泽地带。","棘龙的脚上有蹼，像鸭子的脚，适合在水里划水。","棘龙是渔夫型的恐龙，和陆地上的肉食恐龙很不一样。","棘龙的化石在埃及和摩洛哥等地被发现。","棘龙的牙齿是圆锥形的，不像霸王龙那样有锯齿。","棘龙可能会像现在的棕熊一样在水边捕鱼悠闲自在。","棘龙是恐龙世界里的水上霸主。"],cls:"兽脚亚目·棘龙科",era:"白垩纪中期（约1.12亿-9300万年前）",len:"15-18m",ht:"4-5m",wt:"7-20t",diet:"🥩 肉食",loc:"非洲",nm:'"有棘的蜥蜴"',tag:"最大的肉食恐龙·唯一会游泳的大型肉食龙",body:"#4DA89E",belly:"#B0E0DA",accent:"#2E7D75",babyW:26,babyH:30,adultW:38,adultH:48,hH:0,hS:0,hW:0,hF:0,nL:2,tL:1,pat:"waves"},{id:7,name:"甲龙",nick:"小坦克",facts:["甲龙生活在白垩纪晚期，是植食性恐龙。","甲龙全身覆盖着厚厚的铠甲，连眼皮上都有骨板，像一辆坦克。","甲龙的尾巴末端有一个巨大的骨头锤子，叫尾锤。","尾锤又重又硬，能狠狠砸向捕食者的腿，非常厉害。","甲龙身体低矮四肢短小，贴着地面走路。","甲龙爱吃低矮的植物，比如蕨类植物的叶子。","甲龙的牙齿很小呈树叶形，适合啃咬软叶子。","甲龙身长约6到8米，但身高只有1.5米左右，像一辆小汽车。","甲龙的头部也覆盖着厚厚的骨板，像戴了头盔。","甲龙也被称为活坦克或坦克龙。","甲龙的下巴可以前后移动，能更好地咀嚼植物。","甲龙行动缓慢但防御力超强，几乎没有天敌敢惹它。","甲龙是白垩纪晚期防御能力最强的恐龙。","甲龙的化石在北美被发现，是美国蒙大拿州的州化石。"],cls:"鸟臀目·甲龙科",era:"白垩纪晚期（约7000万-6600万年前）",len:"6-8m",ht:"1.5-1.8m",wt:"4-6t",diet:"🌿 植食",loc:"北美洲",nm:'"融合在一起的蜥蜴"',tag:"活坦克·防御最强的恐龙",body:"#8B7D5E",belly:"#D4C9B0",accent:"#63553A",babyW:34,babyH:24,adultW:54,adultH:36,hH:0,hS:2,hW:0,hF:0,nL:0,tL:2,pat:"scales"},{id:8,name:"伪齿龙",nick:"小怪怪",facts:["伪齿龙是鸭嘴龙类的一种，生活在白垩纪晚期。","伪齿龙最特别的是嘴巴里长着几百颗小牙齿，像搓衣板一样。","这些小牙齿排成好几排，用来磨碎坚硬的植物。","伪齿龙的牙齿会不断生长，旧的磨掉了新的马上补上。","伪齿龙的嘴巴又宽又扁像鸭子的嘴，非常可爱。","伪齿龙可以用后腿站立，也可以四足行走。","伪齿龙是植食性恐龙，主要吃松柏类和蕨类植物。","伪齿龙的头骨很长，上面没有冠，头部比较扁平。","伪齿龙的前肢比后肢短，但手指灵活可能可以用来抓握树枝。","伪齿龙生活在北美洲，当时那里有大片的森林。","伪齿龙这个名字意思是假的牙齿，因为它的牙齿很特别。","伪齿龙可能是群居动物，喜欢和朋友们一起生活。","伪齿龙的体长可达7到8米，算是体型较大的鸭嘴龙。","伪齿龙的化石在北美西部被发现。"],cls:"鸟臀目·鸭嘴龙科",era:"白垩纪晚期（约7500万-7000万年前）",len:"7-8m",ht:"2-3m",wt:"2-3t",diet:"🌿 植食",loc:"北美洲",nm:'"假的牙齿"',tag:"鸭嘴家族·几百颗牙齿的吃货",body:"#7BB661",belly:"#C8E6B0",accent:"#56963E",babyW:28,babyH:26,adultW:44,adultH:40,hH:0,hS:0,hW:0,hF:0,nL:0,tL:2,pat:"stripes"},{id:9,name:"肿头龙",nick:"硬头头",facts:["肿头龙生活在白垩纪晚期，是植食性或杂食性恐龙。","肿头龙最著名的特征是头顶的骨头超级厚，像戴了一顶钢盔。","肿头龙的头骨厚度可达25厘米，是恐龙中头最厚的！","科学家认为肿头龙可能像现在的山羊一样，用头互相撞击争夺朋友。","肿头龙的脑袋圆圆的像一个大馒头。","肿头龙的体型不算大，身长约4到5米。","肿头龙的眼睛上方和鼻子上方可能长有骨质的小疙瘩。","肿头龙是双足行走的，后腿粗壮前肢短小。","肿头龙的牙齿很小，适合啃食植物的叶子和果实。","肿头龙生活在北美洲的森林和草原地区。","肿头龙可能是恐龙中长相最呆萌的一种，顶着个大圆脑袋。","肿头龙的脖子比较短，用来支撑它那颗沉重的大脑袋。","科学家对肿头龙的撞头行为还在研究中。","肿头龙的化石在美国和加拿大都有发现。"],cls:"鸟臀目·肿头龙科",era:"白垩纪晚期（约7000万-6600万年前）",len:"4-5m",ht:"约2m",wt:"400-500kg",diet:"🌿 植食/🍲 杂食",loc:"北美洲",nm:'"厚头的蜥蜴"',tag:"铁头功大师·头顶25厘米厚",body:"#E88DB0",belly:"#F5C0E0",accent:"#C8638A",babyW:30,babyH:26,adultW:48,adultH:40,hH:2,hS:0,hW:0,hF:0,nL:0,tL:1,pat:"hearts"},{id:10,name:"窃蛋龙",nick:"小可爱",facts:["窃蛋龙生活在白垩纪晚期，是一种小型兽脚类恐龙。","窃蛋龙的名字其实是冤枉它的！","最早发现的窃蛋龙化石趴在恐龙蛋上，其实它是在孵蛋！","窃蛋龙全身覆盖着羽毛，像一只大鸟。","窃蛋龙用两条腿走路，跑得很快。","窃蛋龙的嘴巴像鹦鹉的喙，没有牙齿。","窃蛋龙可能是杂食性恐龙，吃植物小动物也吃蛋。","窃蛋龙会像鸟一样趴在蛋上孵蛋，是非常有爱的恐龙妈妈。","窃蛋龙生活在亚洲蒙古地区，是中国附近的邻居。","窃蛋龙的体型只有火鸡那么大，非常小巧。","窃蛋龙的前肢上有三根手指，可以抓握东西。","窃蛋龙的尾巴较短，身体很灵活。","窃蛋龙可能是恐龙中最被误解的恐龙。","科学家发现过窃蛋龙和宝宝在一起的化石，说明它很爱孩子。"],cls:"兽脚亚目·窃蛋龙科",era:"白垩纪晚期（约7500万-7000万年前）",len:"1.5-2m",ht:"0.5-1m",wt:"20-40kg",diet:"🍲 杂食",loc:"亚洲（蒙古、中国）",nm:'"偷蛋的蜥蜴"（冤）',tag:"最被误解的恐龙·其实是好妈妈",body:"#F5B342",belly:"#FFE0A0",accent:"#D48A20",babyW:28,babyH:24,adultW:44,adultH:36,hH:0,hS:0,hW:0,hF:0,nL:0,tL:0,pat:"spots"},{id:11,name:"沧龙",nick:"大尾巴",facts:["沧龙是生活在海洋里的爬行动物，不是恐龙。","沧龙生活在白垩纪晚期，是海洋中的顶级捕食者。","沧龙的身体呈流线型，像鱼一样非常适合游泳。","沧龙的尾巴又长又扁，像船桨可以有力地在水中推进。","沧龙的四肢变成了鳍状肢，像船桨一样划水。","沧龙的嘴巴非常大，里面长满了又长又尖的牙齿。","沧龙主要吃鱼海龟菊石，甚至其他小型海洋爬行动物。","沧龙的视力在水下非常好，能发现远处的猎物。","沧龙有点像现在的科莫多巨蜥，但它是海里的巨蜥。","沧龙生活在海洋里，但需要浮出水面呼吸空气。","沧龙的化石在世界各地都有发现。","沧龙曾在电影侏罗纪世界大显身手，是海洋霸主。","沧龙的体型巨大，有些种类体长超过15米。","沧龙是最晚灭绝的海洋爬行动物之一，和恐龙一起灭绝。"],cls:"有鳞目·沧龙科（✖不是恐龙）",era:"白垩纪晚期（约8200万-6600万年前）",len:"最大15m+",ht:"海洋生物",wt:"5-15t",diet:"🥩 肉食",loc:"全球沿海",nm:'"默尔河的蜥蜴"',tag:"海洋霸主·不是恐龙是亲戚",body:"#87CEEB",belly:"#D0EAF5",accent:"#5A9EC4",babyW:32,babyH:28,adultW:50,adultH:42,hH:0,hS:1,hW:0,hF:0,nL:1,tL:1,pat:"waves"},{id:12,name:"似鸡龙",nick:"长跑冠军",facts:["似鸡龙生活在白垩纪晚期，是一种像鸵鸟一样的恐龙。","似鸡龙是恐龙世界中跑得最快的恐龙之一，时速可达80公里！","似鸡龙没有牙齿，嘴巴像鸟的喙。","似鸡龙是杂食性恐龙，吃植物小动物以及昆虫和蛋。","似鸡龙有一双大长腿身体轻盈，专门为跑步而生。","似鸡龙的尾巴又长又硬，可以在快速奔跑时保持平衡。","似鸡龙全身可能覆盖着羽毛。","似鸡龙名字意思是像鸡的蜥蜴，因为它长得很像鸵鸟和鸡。","似鸡龙的前肢短小，有三根锋利的手指。","似鸡龙可能像现在的鸵鸟一样以速度和敏捷躲避捕食者。","似鸡龙生活在亚洲和北美洲。","似鸡龙的眼睛很大视力很好，能及时发现危险。","似鸡龙和鸟类有亲缘关系。","似鸡龙的化石在蒙古和中国都有发现。"],cls:"兽脚亚目·似鸟龙科",era:"白垩纪晚期（约7000万-6600万年前）",len:"4-4.5m",ht:"1.5-2m",wt:"150-200kg",diet:"🍲 杂食",loc:"亚洲、北美洲",nm:'"像鸡的蜥蜴"',tag:"跑得最快的恐龙之一·时速80公里",body:"#C0784C",belly:"#E8C8A8",accent:"#8A532E",babyW:32,babyH:28,adultW:50,adultH:42,hH:2,hS:0,hW:0,hF:1,nL:0,tL:0,pat:"zigzag"},{id:13,name:"慈母龙",nick:"好妈妈",facts:["慈母龙生活在白垩纪晚期，是一种非常爱宝宝的恐龙。","慈母龙名字意思就是好妈妈恐龙，会精心照顾孩子。","慈母龙会筑巢，用泥土和植物堆成一个大窝。","慈母龙会把蛋产在巢里然后坐在上面孵蛋，非常耐心。","小慈母龙出生后妈妈会把食物带回巢里喂它们。","慈母龙是植食性恐龙，嘴巴像鸭嘴吃植物。","慈母龙体长可达9米，是一种大型的鸭嘴龙。","慈母龙是群居动物，所有妈妈会一起照顾所有的小宝宝。","慈母龙像现在的某些鸟类一样，有托儿所制度。","慈母龙的发现证明有些恐龙是有家庭观念的。","慈母龙的化石在北美被发现，尤其是美国蒙大拿州。","慈母龙的后腿比前腿长，可以站立起来吃高处树叶。","慈母龙的嘴巴里有几百颗牙齿，用来磨碎植物。","慈母龙是恐龙世界里最温柔的妈妈。"],cls:"鸟臀目·鸭嘴龙科",era:"白垩纪晚期（约7600万-7400万年前）",len:"7-9m",ht:"2.5-3m",wt:"3-4t",diet:"🌿 植食",loc:"北美洲（美国蒙大拿州）",nm:'"好妈妈蜥蜴"',tag:"最有爱的妈妈·恐龙界的模范家长",body:"#7FA06A",belly:"#BDD4AC",accent:"#5A7D48",babyW:30,babyH:28,adultW:48,adultH:42,hH:0,hS:0,hW:0,hF:0,nL:1,tL:1,pat:"dots"},{id:14,name:"小盗龙",nick:"飞天小侠",facts:["小盗龙是一种小型兽脚类恐龙，生活在白垩纪早期。","小盗龙是目前已知最早会飞的恐龙之一。","小盗龙全身覆盖着羽毛，而且是四翼的前后肢都有翅膀。","小盗龙可以在树木之间滑翔，像现在的飞鼠一样。","小盗龙的体型很小，和一只乌鸦差不多大。","小盗龙的羽毛颜色可能是黑色带光泽，像乌鸦一样。","小盗龙生活在中国辽宁地区，是中国的恐龙明星。","小盗龙是肉食性恐龙，主要吃昆虫和小型动物。","小盗龙的发现非常重要，为鸟类起源于恐龙提供了有力证据。","小盗龙的前肢和后肢都很长，可以抓住树枝。","小盗龙的爪子很锋利，适合攀爬树木。","小盗龙可能像啄木鸟一样在树上寻找食物。","小盗龙的化石在中国非常著名。","小盗龙名字意思就是小小的盗贼。"],cls:"兽脚亚目·驰龙科",era:"白垩纪早期（约1.2亿-1.1亿年前）",len:"0.5-1m",ht:"0.2-0.3m",wt:"1-2kg",diet:"🥩 肉食",loc:"🇨🇳 中国（辽宁）",nm:'"小小的盗贼"',tag:"四翼飞天小侠·鸟类起源于恐龙的关键证据",body:"#E8749E",belly:"#F5C8DA",accent:"#CC5078",babyW:26,babyH:22,adultW:40,adultH:34,hH:0,hS:0,hW:1,hF:0,nL:0,tL:2,pat:"stars"},{id:15,name:"板龙",nick:"大板板",facts:["板龙生活在三叠纪晚期，是早期的蜥脚类恐龙。","板龙是最早的大型植食性恐龙之一。","板龙可以用后腿站立，去吃高处的树叶。","板龙的前肢有锋利的爪子，可以抓树枝或防御敌人。","板龙是群居动物，常常一大群一起活动。","板龙的身体已经具备了一些大型蜥脚类恐龙的特征。","板龙体长可达6到8米，在当时算是大个子。","板龙的脖子比较长，但不像腕龙那样夸张。","板龙的牙齿是树叶形的，适合啃咬植物。","板龙的化石在欧洲有大量发现，尤其是在德国。","板龙代表了蜥脚类恐龙的早期形态。","板龙可能是当时陆地上最常见的植食性恐龙。","板龙需要吃大量的植物来维持巨大的身体。","板龙虽然笨重但可以用后腿站立起来够更高的树叶。"],cls:"蜥脚形亚目·板龙科",era:"三叠纪晚期（约2.14亿-2.04亿年前）",len:"6-8m",ht:"约3m（站立）",wt:"1-2t",diet:"🌿 植食",loc:"欧洲",nm:'"扁平的蜥蜴"',tag:"早期的巨型植食龙·前爪能抓树枝",body:"#5CA86A",belly:"#B0DCB8",accent:"#388048",babyW:28,babyH:26,adultW:44,adultH:40,hH:0,hS:0,hW:0,hF:0,nL:1,tL:1,pat:"zigzag"},{id:16,name:"巨齿龙",nick:"大牙牙",facts:["巨齿龙生活在侏罗纪中期，是早期的肉食性恐龙。","巨齿龙的牙齿非常大，边缘有锯齿，像牛排刀一样锋利。","巨齿龙是双足行走的，后腿粗壮前肢相对较短。","巨齿龙可能捕食剑龙等植食性恐龙。","巨齿龙名字意思是巨大的牙齿。","巨齿龙是第一个被正式命名的恐龙之一。","巨齿龙生活在英格兰，是英国的恐龙明星。","巨齿龙的体型中等，体长可达7到9米。","巨齿龙的爪子很锋利，可以抓住猎物。","巨齿龙可能是伏击型捕食者，悄悄靠近猎物然后突然袭击。","巨齿龙的大脑不算大，但作为早期恐龙已经不错了。","巨齿龙的尾巴又长又粗，可以帮助奔跑时平衡。","巨齿龙的化石在欧洲也有发现。","巨齿龙是侏罗纪时期的重要捕食者。"],cls:"兽脚亚目·巨齿龙科",era:"侏罗纪中期（约1.66亿-1.61亿年前）",len:"7-9m",ht:"约2.5m",wt:"1-2t",diet:"🥩 肉食",loc:"欧洲（英格兰）",nm:'"巨大的牙齿"',tag:"第一个被正式命名的恐龙之一·英国的恐龙明星",body:"#D4A86A",belly:"#F0D8B8",accent:"#A87A42",babyW:28,babyH:26,adultW:44,adultH:40,hH:0,hS:0,hW:0,hF:0,nL:0,tL:1,pat:"stripes"},{id:17,name:"迷惑龙",nick:"大雷龙",facts:["迷惑龙生活在侏罗纪晚期，是体型最大的恐龙之一。","迷惑龙以前有一个更响亮的名字叫雷龙！","迷惑龙体长可达23米，体重超过20吨，像好几头大象加在一起。","迷惑龙的脖子很长尾巴更长，像一条长鞭子。","迷惑龙是植食性恐龙，每天要吃大量的植物。","迷惑龙的尾巴可以甩动发出巨大的响声，用来吓唬捕食者。","迷惑龙的四肢像四根大柱子，支撑着它庞大的身体。","迷惑龙的鼻孔在头顶上，和腕龙一样。","迷惑龙生活在北美洲的平原和森林里。","迷惑龙可能是群居动物和朋友们一起迁徙寻找食物。","迷惑龙的牙齿像钉子，只能把树叶撸下来吞掉。","迷惑龙的胃里需要有很多小石头来帮助消化食物。","迷惑龙是蜥脚类恐龙中的重量级选手。","迷惑龙的化石在美国西部非常多见。"],cls:"蜥脚形亚目·梁龙科",era:"侏罗纪晚期（约1.55亿-1.45亿年前）",len:"22-26m",ht:"4-5m",wt:"20-30t",diet:"🌿 植食",loc:"北美洲（美国西部）",nm:'"令人迷惑的蜥蜴"',tag:'曾用名"雷龙"·脚步声像打雷',body:"#6AAA9E",belly:"#B8E0D8",accent:"#42807A",babyW:24,babyH:34,adultW:36,adultH:54,hH:0,hS:0,hW:0,hF:0,nL:2,tL:2,pat:"waves"},{id:18,name:"美颌龙",nick:"小美美",facts:["美颌龙生活在侏罗纪晚期，是目前已知最小的恐龙之一。","美颌龙的体型只有鸡那么大，非常小巧可爱。","美颌龙是肉食性恐龙，主要吃昆虫和小型蜥蜴。","美颌龙的嘴巴又细又长，牙齿像小针一样尖。","美颌龙跑得很快，身体非常轻盈灵活。","美颌龙名字意思是美丽的下巴。","美颌龙的后腿很长，前肢有三根手指可以抓住猎物。","美颌龙生活在欧洲，主要是在德国南部。","美颌龙的化石非常完整，让科学家能很好地研究它。","美颌龙可能是恐龙世界里跑得最快的小猎手。","美颌龙的尾巴很长，占了身体的一半以上。","美颌龙经常出现在恐龙科普书里，因为体型小很特别。","美颌龙可能是恐龙中的吉娃娃，小而机灵。","美颌龙虽然小但也是凶猛的捕食者。"],cls:"兽脚亚目·美颌龙科",era:"侏罗纪晚期（约1.5亿年前）",len:"0.7-1m",ht:"0.2-0.3m",wt:"2-4kg",diet:"🥩 肉食",loc:"欧洲（德国南部）",nm:'"美丽的下巴"',tag:"最小的恐龙之一·只有鸡那么大",body:"#B07AAA",belly:"#DCC0D8",accent:"#7E4E78",babyW:30,babyH:24,adultW:48,adultH:36,hH:0,hS:2,hW:0,hF:0,nL:0,tL:1,pat:"hearts"},{id:19,name:"中国鸟龙",nick:"华夏飞羽",facts:["中国鸟龙生活在白垩纪早期，是一种长羽毛的恐龙。","中国鸟龙的化石在中国辽宁被发现，这是中国制造的恐龙！","中国鸟龙全身覆盖着羽毛，看起来像一只大鸟。","中国鸟龙是驰龙科的恐龙，和伶盗龙迅猛龙是亲戚。","中国鸟龙可能有一定的飞行能力，或者在树间滑翔。","中国鸟龙的羽毛和鸟类的羽毛非常相似。","中国鸟龙是肉食性恐龙，主要吃小动物和昆虫。","中国鸟龙的体型不大，和一只孔雀差不多。","中国鸟龙的发现证明了鸟类是从恐龙进化而来的。","中国鸟龙的爪子很锋利，可以帮助它抓树枝或猎物。","中国鸟龙的眼睛很大，视力非常好。","中国鸟龙名字意思就是中国的鸟形恐龙。","中国鸟龙是热河生物群的重要成员，有大量带羽毛恐龙的化石。","中国鸟龙让我们知道了恐龙不都是大块头也有轻盈会飞的。"],cls:"兽脚亚目·驰龙科",era:"白垩纪早期（约1.2亿-1.1亿年前）",len:"0.5-0.8m",ht:"0.3-0.5m",wt:"1-2kg",diet:"🥩 肉食",loc:"🇨🇳 中国（辽宁）",nm:'"中国的鸟形蜥蜴"',tag:"带羽毛的恐龙·鸟类起源的关键证据",body:"#D4503A",belly:"#F5B8A8",accent:"#A8301E",babyW:34,babyH:30,adultW:54,adultH:44,hH:3,hS:1,hW:0,hF:0,nL:0,tL:2,pat:"flames"}],u=[{id:"t1",name:"自己刷牙",icon:"🦷",energy:10},{id:"t2",name:"按时睡觉",icon:"🌙",energy:15},{id:"t3",name:"收拾玩具",icon:"🧸",energy:8},{id:"t4",name:"整理书包",icon:"🎒",energy:12},{id:"t5",name:"帮忙做家务",icon:"🧹",energy:15},{id:"t6",name:"自己穿衣服",icon:"👕",energy:8},{id:"t7",name:"好好吃饭",icon:"🍚",energy:10},{id:"t8",name:"认真洗手",icon:"🧼",energy:5}],m=[{id:"a1",name:"初来乍到",icon:"⭐",bg:"#FFC857",cond:"初次打开 App 就获得",check:function(e){return!0}},{id:"a2",name:"破壳而出",icon:"🐣",bg:"#FF8C7A",cond:"第 1 只恐龙从蛋里孵化",check:function(e){return e.dinos.some(function(e){return e.stage>=t})}},{id:"a3",name:"小有成就",icon:"🌟",bg:"#6BB6E0",cond:"累计完成任务 3 次",check:function(e){return e.total>=3}},{id:"a4",name:"坚持七天",icon:"🔥",bg:"#FFC857",cond:"连续打卡 7 天",check:function(e){return e.streak>=7}},{id:"a5",name:"恐龙收集者",icon:"🦕",bg:"#7BB661",cond:"解锁 5 种恐龙",check:function(e){return e.dinos.filter(function(e){return e.unlock}).length>=5}},{id:"a6",name:"进化见证者",icon:"✨",bg:"#9B72CF",cond:"有恐龙进化到成年期",check:function(e){return e.dinos.some(function(e){return e.stage>=n})}},{id:"a7",name:"恐龙大师",icon:"👑",bg:"#FFC857",cond:"解锁 10 种恐龙",check:function(e){return e.dinos.filter(function(e){return e.unlock}).length>=10}},{id:"a8",name:"全能训练师",icon:"🌈",bg:"#6BB6E0",cond:"养成完成第 1 只恐龙",check:function(e){return e.dinos.some(function(e){return e.stage===d})}},{id:"a9",name:"习惯大师",icon:"💪",bg:"#7BB661",cond:"累计打卡 15 天",check:function(e){return e.streak>=15}},{id:"a10",name:"恐龙博士",icon:"📚",bg:"#FF8C7A",cond:"养成完成 10 只恐龙",check:function(e){return e.dinos.filter(function(e){return e.stage===d}).length>=10}}],b=null,g={dinos:[],tasks:[],total:0,streak:0,lastDate:null,lastStreakDate:null,selected:0,nextId:100,remind:!0,paid:!1,usedCodes:[]},y=0,v=["2b0fd821ce310a2e104020b90c43d642baebfa4c6fa838be51d193de94e366b1","7addd91f2c7d0c88eee876ed757a3b243535da95808d7359988ea3b859737d7e","ecfe478ccd07890e58d20c10bb90e6cc2637ada07dc771d5b5843c47bf2a0f5a","2287011a7d9a70abcc53845ac6d0a05c7376de9255afb0e3fd217921bb6d3fc5","8444d2fa61eb379d73e5a941e339fc8e0041cde5af2a677b315eb62f86adc26b","99641a2c82a9681a57c7d6ea019197a8063f10c50d553f28a304f01607791d82","650e0548dbf0f3157dbd4d63283d1001761c7de9d66b021569d766d11dfc98ff","dafb270c80816ea96b2fe5450758c3d43853f5db431fc59939eff0df15063fa8","0dc7607ddacb56acc30f2e25a3ae3e45e36caf26f64f80ca2f98c33f688c357a","fd0edaa9f54c2bb690383b0e61ba988055f6c6673dccb6ca2d021d54718d7c57","1558f993265da2be6b54725f9b482d0954f09cdf8b8c664fdb90349ebe2efbd7","c20ab09ad50df01a3737f1d187a8867a67acd26103f917509602f9f53aa06897","cb35a90fd4fff0f65684c360687aa09196d476f97adf6e6dbe5dfd76db36461c","934087561fb84bb9a4e96f383b5e635588a06ad087127d2bc53aed9dafaebb50","05ed6a2ec7c48ba4b77bf09f99d0232c7447ee418d87da8872af1ee898c9aa93","bd6bd688e32328bee5d1161279a3f2387805fb9b42bf2db3439c64479e0d7259","42ef867acee7f44385c0cd82874fec68af3bf07aaa110e5d1a8459e339c3db2b","27339cf433dda3f0be8018125e03ed32d989d63fcf9ad50da66628b221b8e452","87754b4206c0345487fc8c8369f58ba2da0f3982a9a1df8f6d35248f3956f31c","52a1bdc91e28de2d0ae201a50d198ab2160a54559430b62f970902f588616212","4fae2b16c249f012fc55929e512fc8fa152d025f225f8812e82ec0d6953c4752","c64133bdb2372bf1ad44ea2e3ae781c554e508d732b71703c606655268b5691c","4460031cac21666fca23a74a1ebe5486ee4e63f87bbd18d14c8ad284a69ce6a5","092ab3b787275c402376194e2316afad9b974af326b9570bf410c735e0e01eec","f405f4b03282aedbda67d906bd8fb187e818a56b19c427481bf2cd6d22c0797a","146aae6512ade77f568e0fb1a6119cb72b38d789d15b22e3064f78887464e977","c45d64c42dce595b04bfc40c4daa49c8712669d9e2a92a6b904514423f4eb066","3647b95796268bed88108d5e389a08561bff3c441bc016926f68ee9f87c77a41","efbd5be5ccdde91799956a880d748ad894b2b32bfe51a478808af880a78109af","6870343d347f6e1a5cbc39df78e17a1d5381e997e08574b0d52e11411a539e84","0e8e5e195fb0d03a1fab96bdd48d0feae3365fe14955aac122dcf81d85b07617","42a5547a30513d2774c41a7bfdd94d4dc1196117bf782e33a21bfe0aca7fe4ab","0c7077ed21553744c996d5e7f2166e8d48f2a203309164afda2824772c3e932c","a02e9510e6eb82d7c2f7ab8ba013d9df0236376523f1e57905dd8bd90846dff2","33e3117b13556f803e9c8d84c4d7b705b11d32df7508f0416b9ebf4dd7eeefd4","7349d9034543c5e5655519fa1bdfdae706bd00f9f77a08ac06f6c96888df883e","6662a5b222e187b26ad6faf31df434e238bbc377e290396313f66176fd34be2f","d0ee4876351625ba2c9da9be835b612a6db0f1747e68ed96a8de32e2e127e3ab","ca2b3979160dc8dad430da01b78741d75c08de95e1f306202402032e1fb36e52","04c4075f07939c0c8465f43f1f96e4ad831308f20a40443dbda3df439b67dfef","81aa7045c777990bfb39a6af70d5258e32d8757471bd3bfd800e52f4066d808d","7bb7476d433474bb158271e65abc1d4df1d89f8da972d4160ab90b8227187c3f","d24f79f3ecaae7971d6e81822792c532f9801a303b899643877c2bd966435e4f","250c6ccd6a00578740a0fbc7b0ca4dde437dae6bc81513644ea1e2fccb8df17e","8d15928e8be77d0ae02f0700e344cfc6ba5dcd7aed1eca2ca9158c960ad6f968","fec396cb18c4d275b9e0c22ff6353c42af443b736db76fda2fbbe6c45ad76c48","4e7e857501804e045c47ffd4b4e38481fdc2cea44ea0a0abdfac1ea6ead78f83","d21f3f6884f5d215c75a1a124964813758105e0cb84b8171adb75562c9332e31","4dc817ca0a2918f7b9a005b4d55318458467a3f7de7605b4989f57a47219c413","ae2fa6ff85609ddef7b00c75a6e132c61f221a366a4949d09c9ccdc1e6d63325"];function p(){return!(!g||!g.paid)}function h(e){function t(e,t){return e>>>t|e<<32-t}for(var a,n,d=Math.pow,c=d(2,32),o="length",i="",s=[],l=8*e[o],r=h.h=h.h||[],f=h.k=h.k||[],u=f[o],m={},b=2;u<64;b++)if(!m[b]){for(a=0;a<313;a+=b)m[a]=b;r[u]=d(b,.5)*c|0,f[u++]=d(b,1/3)*c|0}for(e+="";e[o]%64-56;)e+="\0";for(a=0;a<e[o];a++){if((n=e.charCodeAt(a))>>8)return"";s[a>>2]|=n<<(3-a)%4*8}for(s[s[o]]=l/c|0,s[s[o]]=l,n=0;n<s[o];){var g=s.slice(n,n+=16),y=r;for(r=r.slice(0,8),a=0;a<64;a++){var v=g[a-15],p=g[a-2],k=r[0],E=r[4],B=r[7]+(t(E,6)^t(E,11)^t(E,25))+(E&r[5]^~E&r[6])+f[a]+(g[a]=a<16?g[a]:g[a-16]+(t(v,7)^t(v,18)^v>>>3)+g[a-7]+(t(p,17)^t(p,19)^p>>>10)|0);(r=[B+((t(k,2)^t(k,13)^t(k,22))+(k&r[1]^k&r[2]^r[1]&r[2]))|0].concat(r))[4]=r[4]+B|0}for(a=0;a<8;a++)r[a]=r[a]+y[a]|0}for(a=0;a<8;a++)for(n=3;n+1;n--){var x=r[a]>>8*n&255;i+=(x<16?0:"")+x.toString(16)}return i}function k(){try{var e=localStorage.getItem("dinoApp_usedCodes");if(e){var t=JSON.parse(e);if(Array.isArray(t))return t}}catch(e){}return[]}function E(e){try{localStorage.setItem("dinoApp_usedCodes",JSON.stringify(e))}catch(e){}}function B(e){if(!e)return"invalid";var t=String(e).trim().toUpperCase();if(g.paid)return"ok";var a=k();if(a.indexOf(t)>=0)return"used";var n=h(t);return v.indexOf(n)>=0?(g.paid=!0,a.push(t),E(a),g.usedCodes=a,C(),N(),pe("🌟 完整版已激活！"+(I()?"已补齐3只喂养":"20只恐龙全部解锁")),"ok"):"invalid"}var x=4;function I(){var t=g.dinos.filter(function(e){return e&&e.unlock&&e.stage!==d}).length;if(t>=3)return!1;for(var a=!1;t<3&&(g.paid||!(g.dinos.filter(function(e){return e&&e.unlock}).length>=x));){var n=g.dinos.find(function(e){return e&&!e.unlock});if(!n){for(var c=0;c<3;c++)g.dinos[c]={stage:e,energy:0,unlock:!0,fk:1};a=!0;break}n.unlock=!0,n.stage||(n.stage=e),n.energy||(n.energy=0),n.fk||(n.fk=1),a=!0,t++}return a&&(C(),N()),a}function C(e){try{var t={dinos:g.dinos,tasks:g.tasks,total:g.total,streak:g.streak,lastDate:g.lastDate,lastStreakDate:g.lastStreakDate,selected:g.selected,nextId:g.nextId,paid:!!g.paid,usedCodes:g.usedCodes||[]};localStorage.setItem("dinoAppV2",JSON.stringify(t));var a={data:t,time:Date.now(),ver:"auto1"};localStorage.setItem("dinoApp_autoBackup",JSON.stringify(a)),g.bkTime=a.time,g.bkSize=JSON.stringify(t).length}catch(e){}}function w(){var e=new Date;return e.getFullYear()+"-"+(e.getMonth()+1)+"-"+e.getDate()}function L(){var t;g.dinos=f.map(function(t,a){return{stage:e,energy:0,unlock:a<3,fk:1}}),g.tasks=u.map(function(e){return Object.assign({},e,{done:!1})}),g.selected=0;try{t=localStorage.getItem("dinoAppV2")}catch(e){}if(t)try{var a=JSON.parse(t);if(a.tasks&&Array.isArray(a.tasks)){for(var n=[],c=0;c<a.tasks.length;c++){var o=a.tasks[c];if(o&&o.id){var i=u.find(function(e){return e.id===o.id});if(i)n.push(Object.assign({},i,o,{done:!!o.done}));else{if(!o.name)continue;n.push({id:o.id,name:o.name,icon:o.icon||"⭐",energy:o.energy||10,done:!!o.done})}}}g.tasks=n}a.dinos&&a.dinos.length===f.length?g.dinos=a.dinos.map(function(e,t){var a=Object.assign({},e);return t<3&&!1===a.unlock&&(a.unlock=!0),a}):g.dinos=f.map(function(t,a){return{stage:e,energy:0,unlock:a<3}}),g.total=a.total||0,g.streak=a.streak||0,g.lastDate=a.lastDate||null,g.lastStreakDate=a.lastStreakDate||null,g.factIdx=a.factIdx||{},g.paid=!!a.paid,g.usedCodes=Array.isArray(a.usedCodes)?a.usedCodes:[],g.selected="number"==typeof a.selected&&a.selected>=0&&a.selected<f.length?a.selected:0,g.nextId=a.nextId||100,g.bkTime=a.bkTime||0,g.bkSize=a.bkSize||0}catch(e){try{localStorage.removeItem("dinoAppV2")}catch(e){}}if(!g.dinos||!g.dinos.length)try{var s=localStorage.getItem("dinoApp_autoBackup");if(s){var l=JSON.parse(s);l&&l.data&&(g.dinos=l.data.dinos,g.tasks=l.data.tasks,g.total=l.data.total||0,g.streak=l.data.streak||0,g.lastDate=l.data.lastDate||null,g.lastStreakDate=l.data.lastStreakDate||null,g.selected=l.data.selected||0,g.nextId=l.data.nextId||100,g.paid=!!l.data.paid,g.usedCodes=Array.isArray(l.data.usedCodes)?l.data.usedCodes:[],he("🔄 已从自动备份恢复数据"))}}catch(e){}g.dinos&&g.dinos.length||(g.dinos=f.map(function(t,a){return{stage:e,energy:0,unlock:a<3}})),g.dinos.forEach(function(t,a){if(!t.fk){var n=Math.max(1,Math.min(f[a]?f[a].facts.length:14,Math.floor((t.energy||0)/100)+1));t.fk=t.stage===e?1:n}}),g.dinos.filter(function(e){return e&&e.unlock&&e.stage!==d}).length<3&&(I()?he("🎁 解锁了新恐龙蛋，快去喂养吧！"):g.paid||g.dinos.filter(function(e){return e&&e.unlock}).every(function(e){return e.stage===d})&&he("💎 4只恐龙都养成啦！解锁完整版可继续收集")),g.tasks||(g.tasks=u.map(function(e){return Object.assign({},e,{done:!1})}));var r=w();g.lastDate!==r&&(g.tasks.forEach(function(e){e&&(e.done=!1)}),g.lastDate=r)}function A(n){return n===e?s:n===t?l:n===a?r:0}function F(e,t){g.factIdx||(g.factIdx={});var a=e+"_"+t;"number"!=typeof g.factIdx[a]&&(g.factIdx[a]=0);for(var n=null,d=0;d<f.length;d++)if(f[d].id===e){n=f[d];break}if(!n||!n.facts)return"";var c=n.facts.length,o=g.factIdx[a]%c;return n.facts[o]}function S(e,t){g.factIdx||(g.factIdx={});for(var a=e+"_"+t,n=null,d=0;d<f.length;d++)if(f[d].id===e){n=f[d];break}var c=n&&n.facts?n.facts.length:14;g.factIdx[a]=(g.factIdx[a]||0)+1,g.factIdx[a]=g.factIdx[a]%c}function H(e){if(e.stage===d)return 100;var t=A(e.stage);return t?Math.min(100,Math.floor(e.energy/t*100)):0}function D(n){return n.stage===e?0:n.stage===t?Math.min(o-1,Math.floor(n.energy/c)):n.stage===a?Math.min(i-1,Math.floor(n.energy/c)):0}function M(n,c){return n.stage===d?"🌟 完成":n.stage===e?"🥚蛋 ("+(s-n.energy)+")":n.stage===t?"🐣 Lv"+(D(n)+1)+"/"+o:n.stage===a?"🦖 Lv"+(D(n)+1)+"/"+i:"🥚"}function T(e,t){return t=t||64,'<img src="dino_assets/dino'+e.id+'e.png" style="width:'+t+"px;height:"+t+'px;object-fit:contain;" alt="'+e.name+'蛋">'}function W(e,t){return t=t||64,'<img src="dino_assets/dino'+e.id+'.jpg" style="width:'+t+"px;height:"+t+'px;object-fit:contain;" alt="'+e.name+'">'}function O(e,t){return t=t||120,'<img src="dino_assets/dino'+e.id+'a.jpg" style="width:'+t+"px;height:"+t+'px;object-fit:contain;" alt="'+e.name+'" onerror="this.onerror=null;this.src=&apos;dino_assets/dino'+e.id+'.jpg&apos;">'}function z(e,t){return t=t||96,'<img src="dino_assets/dino'+e.id+'g.jpg" style="width:'+t+"px;height:"+t+'px;object-fit:contain;" alt="'+e.name+'" onerror="this.onerror=null;this.src=&apos;dino_assets/dino'+e.id+'.jpg&apos;">'}function P(n,c,o){var i=f[c];return i?n.stage===d?O(i,o):n.stage===e?T(i,o):n.stage===t?W(i,o):n.stage===a?z(i,o):O(i,o):""}function N(){try{j()}catch(e){console.error(e)}try{V()}catch(e){console.error(e)}try{U()}catch(e){console.error(e)}try{Q()}catch(e){console.error(e)}}function j(){for(var n=g.selected,u="",m=0;m<f.length;m++)if((k=g.dinos[m])&&k.unlock&&k.stage!==d){var b=f[m],y=m===n,v=H(k),p=P(k,m,64),h=M(k,m);u+='<div class="garden-card'+(y?" active":"")+'" data-i="'+m+'">'+p+'<div class="g-name">'+b.nick+'</div><div class="g-level">'+h+'</div><div class="g-bar"><div class="g-fill" style="width:'+v+'%"></div></div></div>'}var k;if(u||(u='<div style="padding:20px;text-align:center;color:#5C5147;font-size:14px;">🥚 还没有可喂养的恐龙（可能都已养成）</div>'),document.getElementById("gardenScroll").innerHTML=u,document.querySelectorAll(".garden-card").forEach(function(e){e.addEventListener("click",function(){_(parseInt(e.dataset.i))})}),k=g.dinos[n]){b=f[n];var E,B=P(k,n,160);E=k.stage===d?"🌟 养成完成":k.stage===e?"🥚 蛋 ("+Math.min(s,k.energy)+"/"+s+")":k.stage===t?"🐣 幼年期 Lv."+(D(k)+1)+"/"+o+" ("+Math.min(l,k.energy)+"/"+l+")":k.stage===a?"🦖 成长期 Lv."+(D(k)+1)+"/"+i+" ("+Math.min(r,k.energy)+"/"+r+")":"";var x="";if(k.stage!==d)for(var I=k.stage===e?1:k.stage===t?o:k.stage===a?i:0,C=k.energy,w=0;w<I;w++){var L=Math.min(c,C);C=Math.max(0,C-c),x+='<div class="f-level-row"><span class="lv-label">Lv'+(w+1)+'</span><div class="lv-bar"><div class="lv-fill" style="width:'+Math.floor(L/c*100)+'%"></div></div><span class="lv-count">'+(L>=c?"✓":L+"/"+c)+"</span></div>"}var A='<div id="fsvg">'+B+'</div><div class="f-name" onclick="showDinoProfile(dd.selected)">'+b.name+'<span style="font-size:14px;color:#C8B88A;margin-left:6px;cursor:pointer">📋</span></div><div style="font-size:13px;color:#888;margin-top:-6px">（'+b.nick+'）</div><div class="f-stage">'+E+"</div>";x&&(A+='<div class="f-levels">'+x+"</div>"),A+='<div class="f-fact">💡 '+F(b.id,(k.fk||1)-1)+"</div>",document.getElementById("featuredCard").innerHTML=A}}function _(e){g.selected=e,C(),j()}function V(){var e=g.tasks.filter(function(e){return e&&e.done}).length;document.getElementById("doneCount").textContent=e+"/"+g.tasks.length;for(var t=["active","active","blue","coral","blue","coral","blue","active"],a="",n=0;n<g.tasks.length;n++){var d=g.tasks[n];if(d&&d.name){var c=d.done?"active":t[n%t.length],o=d.done?"#7BB661":"blue"===c?"#6BB6E0":"coral"===c?"#FF8C7A":"#FFC857";a+='<div class="task-item"><div class="ti-icon">'+(d.icon||"⭐")+'</div><div class="ti-body"><div class="ti-name" style="'+(d.done?"color:#5C5147":"")+'">'+d.name+'</div><div class="ti-reward" style="color:'+o+'">⚡ +'+d.energy+' 能量</div></div><button class="btn-check '+c+'" data-i="'+n+'"'+(d.done?" disabled":"")+">"+(d.done?"✓":"打卡")+"</button></div>"}}document.getElementById("taskList").innerHTML=a,document.querySelectorAll(".btn-check").forEach(function(e){e.addEventListener("click",function(){q(parseInt(e.dataset.i))})})}function q(e){var t=g.tasks[e];if(t&&!t.done){t.done=!0;var a=w();g.lastStreakDate!==a&&(g.streak++,g.lastStreakDate=a),g.total++,y=t.energy,xe(),C(),N(),G(t.energy)}}function G(e){document.getElementById("feedEnergyText").textContent="⚡ +"+e+" 能量！喂给哪只恐龙？";for(var t="",a=0;a<f.length;a++){var n=f[a],c=g.dinos[a];if(c&&c.unlock&&c.stage!==d){var o=P(c,a,56),i="Lv"+(D(c)+1);t+='<div class="feed-item" data-i="'+a+'">'+o+'<div class="fi-name">'+n.name+'</div><div class="fi-energy">'+i+'</div><div class="fi-bar"><div class="fi-fill" style="width:'+H(c)+'%"></div></div></div>'}}document.getElementById("feedGrid").innerHTML=t,document.querySelectorAll(".feed-item").forEach(function(e){e.addEventListener("click",function(){J(parseInt(e.dataset.i))})}),document.getElementById("feedModal").style.display="block",document.getElementById("feedOverlay").classList.add("show")}function R(){document.getElementById("feedModal").style.display="none",document.getElementById("feedOverlay").classList.remove("show"),y=0}function J(n){if(y){var c=y,o=g.dinos[n];if(o&&o.stage!==d){try{document.getElementById("profilePopup").style.display="none",document.getElementById("profileOverlay").classList.remove("show")}catch(e){}o.energy+=c,y=0,Ie();var i=!1;Ae("screenHome");var u=o.stage===e,m=o.stage===t,b=o.stage===a;o.stage===e&&o.energy>=s&&(o.stage=t,o.energy-=s,i=!0,Ce()),o.stage===t&&o.energy>=l&&(o.stage=a,o.energy-=l,i=!0,we()),o.stage===a&&o.energy>=r&&(o.stage=d,o.energy=0,i=!0,Le()),g.selected=n,R(),C(),N(),setTimeout(function(){var e=document.getElementById("fsvg");if(e){if(e.classList.remove("feed-bounce"),e.offsetWidth,o.stage===d)if(ge(),ye(20),ve(),e.classList.add("feed-bounce"),pe("🌟 "+f[n].name+" 养成完成！"),g.paid)(a=g.dinos.find(function(e){return!e.unlock}))&&(a.unlock=!0,setTimeout(function(){pe("🎉 新恐龙："+f[g.dinos.indexOf(a)].name+" 已解锁！")},2800),N());else{var t=g.dinos.filter(function(e){return e&&e.unlock}).length,a=g.dinos.find(function(e){return!e.unlock});t<x&&a?(a.unlock=!0,setTimeout(function(){pe("🎉 新恐龙："+f[g.dinos.indexOf(a)].name+" 已解锁！")},2800),N()):setTimeout(function(){ie()},2800)}else u&&i?(ge(),ye(8),e.classList.add("feed-bounce")):m&&i?(ge(),ye(10),e.classList.add("feed-bounce")):b&&i?(ge(),ye(20),ve(),e.classList.add("evolving"),setTimeout(function(){e.classList.remove("evolving")},800)):e.classList.add("feed-bounce");setTimeout(function(){e.classList.remove("feed-bounce")},1200)}me(c),be(3),i||he("⚡ +"+c+" 送到 "+f[n].name+" 了！"),o.fk||(o.fk=1),o.fk<di.facts.length&&o.fk++,S(f[n].id,o.fk-1),C()},80)}}}function U(){var e=g.dinos.filter(function(e){return e.stage===d}).length,t=g.dinos.filter(function(e){return e.unlock}).length;document.getElementById("statsRow").innerHTML='<div class="stat-block"><span class="num" style="color:#FFC857">'+e+'/20</span><span class="label">养成</span></div><div class="stat-divider"></div><div class="stat-block"><span class="num" style="color:#FF8C7A">'+t+'</span><span class="label">已解锁</span></div><div class="stat-divider"></div><div class="stat-block"><span class="num" style="color:#6BB6E0">'+g.streak+'天</span><span class="label">连续</span></div>';for(var a="",n=0;n<f.length;n++){var c=f[n],o=g.dinos[n],i=(b=o&&o.unlock)?P(o,n,80):T(c,40),s=b?H(o):0,l=b?o.stage===d?"🌟 完成":M(o,n):g.paid?"🔒 加油":"💎 完整版";a+='<div class="coll-dino'+(b?"":" locked")+'" data-i="'+(b?n:-1)+'">'+i+'<div class="cd-name" style="color:'+(b?"#2D2A26":"#C8B88A")+'">'+c.nick+'</div><div class="cd-level" style="color:'+(b?"#5C5147":"#C8B88A")+'">'+l+"</div>"+(b&&o.stage!==d?'<div class="cd-bar"><div class="cd-fill" style="width:'+s+"%;background:"+c.body+'"></div></div>':"")+"</div>"}document.getElementById("dinoGrid").innerHTML=a,document.querySelectorAll(".coll-dino[data-i]").forEach(function(e){var t=e.dataset.i;"-1"!==t&&parseInt(t)>=0?e.addEventListener("click",function(){ce(parseInt(t))}):"-1"===e.dataset.i&&e.addEventListener("click",function(){g.paid||ie()})});for(var r="",u=0;u<m.length;u++){var b,y=m[u];r+='<div class="badge-item" data-idx="'+u+'"><div class="b-icon" style="background:'+((b=y.check(g))?y.bg:"#F5E5BD")+";color:"+(b?"#2D2A26":"#C8B88A")+'">'+(b?y.icon:"?")+'</div><div class="b-name '+(b?"unlocked":"locked")+'">'+(b?y.name:"未解锁")+"</div></div>"}document.getElementById("badgeRow").innerHTML=r,document.querySelectorAll(".badge-item").forEach(function(e){e.addEventListener("click",function(){Y(parseInt(e.dataset.idx))})})}function Y(e){var t=m[e];if(t){var a=t.check(g);document.getElementById("popupIcon").textContent=a?t.icon:"❓",document.getElementById("popupTitle").textContent=a?t.name:"未解锁",document.getElementById("popupDesc").textContent=a?t.name+" 成就已达成！":"努力完成任务，解锁此成就吧！",document.getElementById("popupHint").textContent="条件："+t.cond,document.getElementById("achPopup").style.display="block",document.getElementById("achPopupOverlay").classList.add("show")}}function K(){document.getElementById("achPopup").style.display="none",document.getElementById("achPopupOverlay").classList.remove("show")}function Q(){for(var e="",t=0;t<g.tasks.length;t++){var a=g.tasks[t];if(a&&a.name){var n=a.name.replace(/"/g,"&quot;");e+='<div class="st-item"><div class="sti-icon">'+(a.icon||"⭐")+'</div><div class="sti-body"><div class="row"><label>名称</label><input class="ename" type="text" value="'+n+'" data-id="'+a.id+'" data-f="name"></div><div class="row"><label>⚡</label><input class="energy" type="number" value="'+(a.energy||10)+'" min="1" max="'+(g.paid?9999:100)+'" data-id="'+a.id+'" data-f="energy"></div></div><button class="btn-del" onclick="del(\''+a.id+"')\">✕</button></div>"}}document.getElementById("settingsTaskList").innerHTML=e,document.querySelectorAll(".st-item input").forEach(function(e){e.addEventListener("change",function(){var t=e.dataset.id,a=e.dataset.f,n=g.tasks.find(function(e){return e.id===t});if(n){if("name"===a)n.name=e.value||"(未命名)";else if("energy"===a){var d=parseInt(e.value)||5;n.energy=g.paid?Math.max(1,Math.min(9999,d)):Math.max(1,Math.min(100,d))}C(),N()}})});var d='<div class="bk-info"><div class="bk-title"><span class="bk-dot"></span>自动备份已开启</div>';d+="<div>📅 最后保存："+te(g.bkTime)+"</div>",d+="<div>📦 数据大小："+(g.bkSize<1024?g.bkSize+" B":(g.bkSize/1024).toFixed(1)+" KB")+"</div>",d+='<div style="color:#888;font-size:12px;margin-top:4px;border-top:1px dashed #C8E6C0;padding-top:6px">',d+="ℹ️ 自动备份存在浏览器内部，用于数据损坏时自动恢复<br>",d+="📤 点击上方「导出数据」下载文件到手机<br>",d+="🔄 换链接时点「导入数据」选择文件恢复</div></div>",document.getElementById("bkStatus").innerHTML=d;var c=document.getElementById("proStatus");c&&(g.paid?c.innerHTML='<div style="background:#F0F8F0;border:1px solid #C8E6C0;border-radius:16px;padding:12px;font-size:13px;color:#3D6B3D;text-align:center">💎 完整版已激活 · 20只恐龙全部解锁</div>':c.innerHTML='<button class="btn-reset" onclick="openPaywall()" style="border-color:#7BB661;color:#7BB661;background:#F0F8F0">💎 升级完整版 · 解锁全部恐龙</button>')}function X(e){var t=g.tasks.find(function(t){return t.id===e});t&&ue("删除任务","确定要删除「"+t.name+"」吗？",function(){g.tasks=g.tasks.filter(function(t){return t.id!==e}),C(),N(),he("已删除")})}function Z(){document.getElementById("taskAddModal").style.display="block",document.getElementById("taskModalOverlay").classList.add("show"),document.getElementById("newTaskName").value="",document.getElementById("newTaskIcon").value="🦷",document.getElementById("newTaskEnergy").value="10",document.getElementById("newTaskEnergy").max=g.paid?9999:100,setTimeout(function(){try{document.getElementById("newTaskName").focus()}catch(e){}},300)}function $(){document.getElementById("taskAddModal").style.display="none",document.getElementById("taskModalOverlay").classList.remove("show")}function ee(){var e=document.getElementById("newTaskName").value.trim(),t=document.getElementById("newTaskIcon").value,a=parseInt(document.getElementById("newTaskEnergy").value)||10;if(e){var n=g.paid?Math.max(1,Math.min(9999,a)):Math.max(1,Math.min(100,a));g.tasks.push({id:"c_"+g.nextId++,name:e,icon:t,energy:n,done:!1}),C(),$(),N(),he("✅ 已添加："+e)}else he("请输入任务名称")}function te(e){if(!e||0==e)return"暂无";var t=new Date(e);return t.getFullYear()+"-"+(t.getMonth()+1).toString().padStart(2,"0")+"-"+t.getDate().toString().padStart(2,"0")+" "+t.getHours().toString().padStart(2,"0")+":"+t.getMinutes().toString().padStart(2,"0")}function ae(){ue("重置所有数据","⚠️ 确定要清空所有进度？\n恐龙、任务、知识全部归零！",function(){try{localStorage.removeItem("dinoAppV2"),localStorage.removeItem("dinoApp_autoBackup")}catch(e){}location.reload()})}function ne(){try{for(var e={},t=0;t<localStorage.length;t++){var a=localStorage.key(t);e[a]=localStorage.getItem(a)}var n=new Blob([JSON.stringify(e,null,2)],{type:"application/json"}),d=document.createElement("a");d.href=URL.createObjectURL(n),d.download="dino_backup_"+(new Date).toISOString().slice(0,10)+".json",document.body.appendChild(d),d.click(),document.body.removeChild(d),URL.revokeObjectURL(d.href),he("✅ 数据已导出")}catch(e){he("导出失败，请重试")}}function de(e){var t=e.target.files[0];if(t){var a=new FileReader;a.onload=function(e){try{var t=JSON.parse(e.target.result),a=0;for(var n in t)t.hasOwnProperty(n)&&(localStorage.setItem(n,t[n]),a++);he("✅ 已导入 "+a+" 条数据，页面即将刷新"),setTimeout(function(){location.reload()},1500)}catch(e){he("❌ 文件格式错误，请选择正确备份文件")}},a.readAsText(t),e.target.value=""}}function ce(d){var c=f[d];if(c){var o=g.dinos[d];if(o){for(var i=Math.floor(Math.random()*c.facts.length),s=[{s:e,fn:"eggSVG"},{s:t,fn:"babySVG"},{s:a,fn:"growingSVG"},{s:n,fn:"adultSVG"}],l="",r=0,u=0;u<s.length&&!(o.stage<s[u].s);u++){r++;var m=s[u];l+='<div style="width:130px;height:130px;background:#FFFCF5;border-radius:28px;display:flex;align-items:center;justify-content:center;border:2px solid #F5E5BD">'+("eggSVG"===m.fn?T(c,130):"babySVG"===m.fn?W(c,130):"growingSVG"===m.fn?z(c,130):O(c,130))+"</div>"}var b='<div style="'+(r>2?"display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;justify-items:center":"display:flex;gap:10px;margin-bottom:12px;justify-content:center;flex-wrap:wrap")+'">'+l+'</div><div style="font-size:20px;font-weight:700;font-family:Noto Serif SC,serif">'+c.name+'</div><div style="font-size:13px;color:#888;margin-bottom:6px">（'+c.nick+'）</div><div style="font-size:14px;color:#5C5147;line-height:1.6;text-align:center;padding:0 4px">'+c.facts[i]+"</div>";document.getElementById("dinoPopupContent").innerHTML=b,document.getElementById("dinoPopup").style.display="block",document.getElementById("dinoPopupOverlay").classList.add("show")}}}function oe(){document.getElementById("dinoPopup").style.display="none",document.getElementById("dinoPopupOverlay").classList.remove("show")}function ie(){document.getElementById("proCodeInput").value="",document.getElementById("paywallPopup").style.display="block",document.getElementById("paywallOverlay").classList.add("show")}function se(){document.getElementById("paywallPopup").style.display="none",document.getElementById("paywallOverlay").classList.remove("show")}function le(){var e=B(document.getElementById("proCodeInput").value);"ok"===e?(se(),N()):he("used"===e?"⚠️ 该兑换码已在本机使用过":"❌ 兑换码无效，请检查后重试")}function re(){document.getElementById("profilePopup").style.display="none",document.getElementById("profileOverlay").classList.remove("show")}function fe(n){var c=f[n],u=g.dinos[n];if(c&&u){var m=["🥚 蛋期","🐣 幼年期","🦖 成长期","🦕 成熟期","⭐ 完成"],b=u.stage<=4?m[u.stage]:"",y=u.stage===d?"":u.stage===e?"1/1":"Lv."+(D(u)+1)+"/"+(u.stage===t?o:u.stage===a?i:0),v='<div style="background:#FFFCF5;border-radius:16px;padding:12px 14px;width:100%;border:1px solid #F5E5BD"><div style="font-size:14px;font-weight:700;margin-bottom:6px;color:#5C5147">📋 科学档案</div><table style="width:100%;font-size:12px;line-height:2.0;border-collapse:collapse"><tr><td style="color:#888;width:58px;padding-right:6px">分类</td><td style="color:#2D2A26">'+c.cls+'</td></tr><tr><td style="color:#888">时代</td><td style="color:#2D2A26">'+c.era+'</td></tr><tr><td style="color:#888">体长</td><td style="color:#2D2A26">'+c.len+'</td></tr><tr><td style="color:#888">身高</td><td style="color:#2D2A26">'+c.ht+'</td></tr><tr><td style="color:#888">体重</td><td style="color:#2D2A26">'+c.wt+'</td></tr><tr><td style="color:#888">食性</td><td style="color:#2D2A26">'+c.diet+'</td></tr><tr><td style="color:#888">发现地</td><td style="color:#2D2A26">'+c.loc+'</td></tr><tr><td style="color:#888">含义</td><td style="color:#2D2A26">'+c.nm+'</td></tr><tr><td style="color:#888">标签</td><td style="color:#2D2A26;font-size:11px">'+c.tag+"</td></tr></table></div>",p="";if(u.stage===d)p='<div style="background:#F0F8F0;border-radius:16px;padding:10px;width:100%;text-align:center;font-size:13px;color:#3D6B3D">⭐ 已完成所有养成！</div>';else{var h=[s,l,r,0][u.stage],k=h>0?h-u.energy:0;p='<div style="background:#FFFCF5;border:1px solid #F5E5BD;border-radius:16px;padding:10px;width:100%;font-size:12px;line-height:1.8;color:#5C5147"><div>🟢 当前：'+b+" "+y+"</div>",h>0&&(p+="<div>⚡ 进度："+u.energy+"/"+h+"</div>"),k>0&&(p+='<div>🎯 还需 <b style="color:#FFC857;font-size:14px">'+k+"</b> 能量升到下一级</div>"),u.stage<3&&(p+='<div style="color:#888;margin-top:2px">下一阶段：'+m[u.stage+1]+"</div>"),p+="</div>"}var E='<div style="font-size:18px;font-weight:700;font-family:Noto Serif SC,serif;margin-bottom:2px">'+c.name+' <span style="font-size:13px;color:#888;font-weight:400">('+c.nick+")</span></div>"+v+p;document.getElementById("profileContent").innerHTML=E,document.getElementById("profilePopup").style.display="block",document.getElementById("profileOverlay").classList.add("show")}}function ue(e,t,a){document.getElementById("confirmTitle").textContent=e,document.getElementById("confirmMsg").textContent=t,document.getElementById("confirmModal").style.display="block",document.getElementById("confirmOverlay").classList.add("show"),document.getElementById("confirmOk").onclick=function(){document.getElementById("confirmModal").style.display="none",document.getElementById("confirmOverlay").classList.remove("show"),a&&a()},document.getElementById("confirmCancel").onclick=function(){document.getElementById("confirmModal").style.display="none",document.getElementById("confirmOverlay").classList.remove("show")}}function me(e){var t=document.getElementById("particleContainer"),a=t.getBoundingClientRect(),n=a.width/2,d=a.height/2,c=document.createElement("div");c.className="float-energy",c.textContent="+"+e+" ⚡",c.style.left=n-40+"px",c.style.top=d-40+"px",t.appendChild(c),setTimeout(function(){c.remove()},1300)}function be(e){for(var t=document.getElementById("particleContainer"),a=0;a<e;a++){var n=document.createElement("div");n.className="heart-particle",n.textContent="❤️";var d=t.offsetWidth/2,c=t.offsetHeight/2;n.style.left=d-20+40*Math.random()+"px",n.style.top=c-30+20*Math.random()+"px",n.style.fontSize=14+10*Math.random()+"px",t.appendChild(n),setTimeout(function(e){e.remove()},1600,null,n)}}function ge(){var e=document.createElement("div");e.className="evo-flash",document.body.appendChild(e),setTimeout(function(){e.remove()},900)}function ye(e){for(var t=document.getElementById("particleContainer"),a=["✨","⭐","🌟","☀️","💥","⭐"],n=t.offsetWidth/2,d=t.offsetHeight/2,c=0;c<e;c++){var o=document.createElement("div");o.className="sparkle",o.textContent=a[Math.floor(Math.random()*a.length)];var i=360*Math.random(),s=80+160*Math.random();o.style.setProperty("--tx",Math.cos(i*Math.PI/180)*s+"px"),o.style.setProperty("--ty",Math.sin(i*Math.PI/180)*s+"px"),o.style.left=n-12+"px",o.style.top=d-12+"px",o.style.fontSize=16+14*Math.random()+"px",t.appendChild(o),setTimeout(function(e){e.remove()},1100,null,o)}}function ve(){for(var e=document.getElementById("particleContainer"),t=["#FFC857","#FF8C7A","#6BB6E0","#7BB661","#9B72CF","#FF6B6B","#F5B342"],a=0;a<40;a++){var n=document.createElement("div");n.className="confetti-piece",n.style.left=100*Math.random()+"%",n.style.top="-10px",n.style.background=t[Math.floor(Math.random()*t.length)],n.style.width=6+8*Math.random()+"px",n.style.height=6+8*Math.random()+"px",n.style.borderRadius=Math.random()>.5?"50%":"2px",n.style.setProperty("--dur",1.5+2*Math.random()+"s"),e.appendChild(n),setTimeout(function(e){e.remove()},4e3,null,n)}}function pe(e){var t=document.getElementById("toast");t.textContent=e,t.className="toast big show",clearTimeout(t._t),t._t=setTimeout(function(){t.className="toast"},3e3)}function he(e){var t=document.getElementById("toast");t.textContent=e,t.classList.add("show"),clearTimeout(t._t),t._t=setTimeout(function(){t.classList.remove("show")},2500)}var ke=null;function Ee(){if(!ke)try{ke=new(window.AudioContext||window.webkitAudioContext)}catch(e){}}function Be(e,t,a,n){try{Ee();var d=ke.createOscillator(),c=ke.createGain();d.type=a||"sine",d.frequency.value=e,c.gain.setValueAtTime(n||.3,ke.currentTime),c.gain.exponentialRampToValueAtTime(.001,ke.currentTime+t),d.connect(c),c.connect(ke.destination),d.start(),d.stop(ke.currentTime+t)}catch(e){}}function xe(){Be(880,.15),setTimeout(function(){Be(1320,.2)},100)}function Ie(){Be(660,.08,"triangle",.15),setTimeout(function(){Be(880,.12,"sine",.12)},80),setTimeout(function(){Be(1100,.1,"sine",.08)},180)}function Ce(){Be(220,.12,"sawtooth",.12),setTimeout(function(){Be(330,.1,"sawtooth",.1)},80),setTimeout(function(){Be(550,.15,"sine",.15)},160),setTimeout(function(){Be(880,.25,"triangle",.2)},260)}function we(){[523,659,784,1047,1319].forEach(function(e,t){setTimeout(function(){Be(e,.22,"sine",.2)},110*t)}),setTimeout(function(){Be(1568,.5,"triangle",.25)},550)}function Le(){[523,587,659,784,880,1047,1175,1319].forEach(function(e,t){setTimeout(function(){Be(e,.25,"sine",.2)},90*t)}),setTimeout(function(){Be(1319,.6,"triangle",.3),setTimeout(function(){Be(1568,.4,"triangle",.2)},300)},720)}function Ae(e){document.querySelectorAll(".tab-item").forEach(function(e){e.classList.remove("active")}),document.querySelectorAll(".screen").forEach(function(e){e.classList.remove("active")}),document.getElementById(e).classList.add("active");var t=document.querySelector('.tab-item[data-screen="'+e+'"]');t&&t.classList.add("active")}document.querySelectorAll(".tab-item").forEach(function(e){e.addEventListener("click",function(){Ae(e.dataset.screen)})}),L(),N();</script>
+</body>
+</html>
